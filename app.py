@@ -2,20 +2,19 @@ import streamlit as st
 import pandas as pd
 import json
 import base64
-import requests
 
 st.set_page_config(page_title="個人健康與體態追蹤器", page_icon="⚖️", layout="centered")
 
 st.title("⚖️ 個人健康與體態追蹤系統")
 
 # 使用者切換
-user = st.radio("選擇使用者", ["Shing", "Gloria"], horizontal=True)
+user = st.radio("選擇使用者", ["使用者一", "使用者二"], horizontal=True)
 
 # 初始化 Session State 模擬資料儲存
 if "logs" not in st.session_state:
-    st.session_state.logs = {"Shing": [], "Gloria": []}
+    st.session_state.logs = {"使用者一": [], "使用者二": []}
 if "inbody" not in st.session_state:
-    st.session_state.inbody = {"Shing": [], "Gloria": []}
+    st.session_state.inbody = {"使用者一": [], "使用者二": []}
 
 # 分頁籤
 tab1, tab2, tab3 = st.tabs(["📝 每日紀錄", "📈 趨勢圖表", "📊 InBody 紀錄"])
@@ -27,7 +26,7 @@ with tab1:
     weight = st.number_input("今日體重 (kg)", min_value=30.0, max_value=200.0, value=60.0, step=0.1)
     
     st.markdown("---")
-    st.markdown("### 🍔 飲食紀錄與拍照辨識")
+    st.markdown("### 🍔 飲食紀錄與 AI 拍照辨識")
     
     if "current_foods" not in st.session_state:
         st.session_state.current_foods = []
@@ -41,9 +40,7 @@ with tab1:
                 try:
                     bytes_data = uploaded_file.getvalue()
                     base64_image = base64.b64encode(bytes_data).decode("utf-8")
-                    media_type = uploaded_file.type or "image/jpeg"
                     
-                    # 支援 OpenAI 或 Anthropic API (此處以 OpenAI 為例)
                     api_key = st.secrets.get("OPENAI_API_KEY", "")
                     if not api_key:
                         st.error("請先在 Streamlit Secrets 設定 OPENAI_API_KEY！")
@@ -57,7 +54,7 @@ with tab1:
                                 {
                                     "role": "user",
                                     "content": [
-                                        {"type": "text", "text": '你是營養估算助手。請觀察食物照片，辨識每一樣食物與熱量，回傳嚴格的 JSON 格式：{"items":[{"name":"食物名稱","portion":"份量","calories":數字,"protein":數字,"fat":數字,"carbs":數字}]}'},
+                                        {"type": "text", "text": '你是營養估算助手。請觀察食物照片，辨識每一樣食物與熱量，務必只回傳標準 JSON 格式，不要包含任何額外文字或解釋，格式如下：\n{"items":[{"name":"食物名稱","portion":"份量","calories":100,"protein":10,"fat":5,"carbs":15}]}'},
                                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                                     ]
                                 }
@@ -65,22 +62,28 @@ with tab1:
                             max_tokens=1000
                         )
                         
-                        result_text = response.choices[0].message.content
-                        cleaned = result_text.replace("```json", "").replace("```", "").strip()
-                        parsed = json.loads(cleaned)
+                        result_text = response.choices[0].message.content.strip()
+                        
+                        # 容錯處理：自動清除可能夾帶的 markdown 標籤
+                        if "```json" in result_text:
+                            result_text = result_text.split("```json")[1].split("```")[0].strip()
+                        elif "```" in result_text:
+                            result_text = result_text.split("```")[1].split("```")[0].strip()
+                            
+                        parsed = json.loads(result_text)
                         
                         for item in parsed.get("items", []):
                             st.session_state.current_foods.append({
                                 "name": item.get("name", "未知食物"),
                                 "portion": item.get("portion", ""),
-                                "calories": item.get("calories", 0),
-                                "protein": item.get("protein", 0),
-                                "fat": item.get("fat", 0),
-                                "carbs": item.get("carbs", 0)
+                                "calories": int(item.get("calories", 0)),
+                                "protein": int(item.get("protein", 0)),
+                                "fat": int(item.get("fat", 0)),
+                                "carbs": int(item.get("carbs", 0))
                             })
                         st.success("AI 辨識完成！已加入下方清單。")
                 except Exception as e:
-                    st.error(f"辨識失敗：{e}")
+                    st.error(f"辨識解析失敗，請確認圖片清晰度或稍後再試。錯誤細節：{e}")
 
     if st.button("➕ 手動新增飲食項目"):
         st.session_state.current_foods.append({"name": "", "portion": "", "calories": 0, "protein": 0, "fat": 0, "carbs": 0})
@@ -90,7 +93,7 @@ with tab1:
     total_fat = 0
     total_carbs = 0
     
-    for idx, food in enumerate(st.session_state.current_foods):
+    for idx, food in enumerate(list(st.session_state.current_foods)):
         cols = st.columns([2, 2, 1, 1, 1])
         with cols[0]:
             st.session_state.current_foods[idx]["name"] = st.text_input(f"名稱 {idx+1}", value=food["name"], key=f"f_name_{idx}")
