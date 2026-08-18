@@ -34,7 +34,7 @@ st.markdown("""
 st.title("⚖️ 個人健康與體態追蹤系統")
 
 # 使用者切換
-user = st.radio("選擇使用者", ["使用者一", "使用者二"], horizontal=True)
+user = st.radio("選擇使用者", ["Shing", "Gloria"], horizontal=True)
 
 # 初始化 Session State 模擬資料儲存（加入完整防呆）
 if "logs" not in st.session_state:
