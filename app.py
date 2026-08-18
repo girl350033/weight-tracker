@@ -77,7 +77,6 @@ st.markdown(
 
 @st.cache_resource
 def get_supabase():
-
     supabase_url = st.secrets.get("SUPABASE_URL", "")
     supabase_key = st.secrets.get("SUPABASE_KEY", "")
 
@@ -100,7 +99,6 @@ supabase = get_supabase()
 
 @st.cache_resource
 def get_openai_client():
-
     api_key = st.secrets.get(
         "OPENAI_API_KEY",
         ""
@@ -119,7 +117,6 @@ def get_openai_client():
 # =========================================================
 
 def safe_float(value, default=0):
-
     try:
         if value is None:
             return default
@@ -131,7 +128,6 @@ def safe_float(value, default=0):
 
 
 def safe_int(value, default=0):
-
     try:
         if value is None:
             return default
@@ -147,12 +143,8 @@ def safe_int(value, default=0):
 
 
 def simple_date(value):
-
     try:
-        d = pd.to_datetime(
-            value
-        )
-
+        d = pd.to_datetime(value)
         return f"{d.month}/{d.day}"
 
     except:
@@ -160,7 +152,6 @@ def simple_date(value):
 
 
 def clean_ai_json(text):
-
     if not text:
         return {}
 
@@ -171,9 +162,31 @@ def clean_ai_json(text):
         .strip()
     )
 
-    return json.loads(
-        text
+    return json.loads(text)
+
+
+def calculate_exercise_calories(
+    weight_kg,
+    met,
+    minutes
+):
+    """
+    kcal/min = MET × 3.5 × 體重kg ÷ 200
+    """
+
+    weight_kg = safe_float(weight_kg)
+    met = safe_float(met)
+    minutes = safe_float(minutes)
+
+    calories = (
+        met
+        * 3.5
+        * weight_kg
+        / 200
+        * minutes
     )
+
+    return round(calories)
 
 
 # =========================================================
@@ -541,6 +554,9 @@ if "current_foods" not in st.session_state:
 if "loaded_food_key" not in st.session_state:
     st.session_state.loaded_food_key = ""
 
+if "ai_exercise" not in st.session_state:
+    st.session_state.ai_exercise = None
+
 
 # =========================================================
 # 標題
@@ -631,6 +647,8 @@ with tab1:
             session_key
         )
 
+        st.session_state.ai_exercise = None
+
 
     default_weight = (
         safe_float(
@@ -656,7 +674,7 @@ with tab1:
 
 
     # =====================================================
-    # 飲食輸入
+    # 飲食
     # =====================================================
 
     st.markdown("---")
@@ -666,7 +684,7 @@ with tab1:
 
 
     # =====================================================
-    # 文字 AI 辨識
+    # 文字辨識食物
     # =====================================================
 
     st.write(
@@ -679,10 +697,9 @@ with tab1:
             "例如：\n"
             "茶葉蛋兩顆\n"
             "無糖豆漿400ml\n"
-            "地瓜100g\n\n"
-            "也可以一次輸入整餐"
+            "地瓜100g"
         ),
-        height=120
+        height=110
     )
 
     if st.button(
@@ -726,19 +743,20 @@ with tab1:
 根據使用者提供的食物名稱與份量，
 估算每一項食物的：
 
-- 食物名稱
-- 份量
-- 熱量 kcal
-- 蛋白質 g
-- 脂肪 g
-- 碳水化合物 g
+食物名稱
+份量
+熱量 kcal
+蛋白質 g
+脂肪 g
+碳水化合物 g
 
-要求：
-1. 如果一次輸入多種食物，拆成多個 items。
-2. 如果份量不明確，使用合理的常見份量估算。
-3. 數值使用合理的營養估算值。
-4. 不要回傳任何解釋。
-5. 只回傳 JSON。
+如果一次輸入多種食物，
+拆成多個 items。
+
+如果份量不明確，
+使用合理常見份量估算。
+
+只回傳 JSON。
 
 格式：
 
@@ -807,7 +825,7 @@ with tab1:
 
 
     # =====================================================
-    # 圖片 AI 辨識
+    # 圖片辨識
     # =====================================================
 
     st.markdown("---")
@@ -885,7 +903,7 @@ with tab1:
 碳水化合物 g
 
 如果有多項食物，
-請拆成多個 items。
+拆成多個 items。
 
 只回傳 JSON。
 
@@ -960,7 +978,7 @@ with tab1:
 
 
     # =====================================================
-    # 手動新增
+    # 手動新增食物
     # =====================================================
 
     with st.expander(
@@ -1193,10 +1211,6 @@ with tab1:
         )
 
 
-        # =================================================
-        # 營養合計
-        # =================================================
-
         total_cal = sum(
             x["calories"]
             for x in cleaned_foods
@@ -1216,6 +1230,7 @@ with tab1:
             x["carbs"]
             for x in cleaned_foods
         )
+
 
         st.write(
             "### 今日營養"
@@ -1247,10 +1262,6 @@ with tab1:
                 f"{total_carb:.1f} g"
             )
 
-
-        # =================================================
-        # 圓餅圖
-        # =================================================
 
         protein_kcal = (
             total_pro * 4
@@ -1296,12 +1307,7 @@ with tab1:
 
             fig.update_traces(
                 textposition="inside",
-                textinfo="percent+label",
-                hovertemplate=(
-                    "%{label}"
-                    "<br>%{percent}"
-                    "<extra></extra>"
-                )
+                textinfo="percent+label"
             )
 
             fig.update_layout(
@@ -1348,10 +1354,170 @@ with tab1:
     # =====================================================
 
     st.markdown("---")
-
     st.subheader(
-        "🏋️ 運動紀錄"
+        "🏃 運動紀錄"
     )
+
+    st.caption(
+        f"目前使用體重：{weight:.1f} kg"
+    )
+
+
+    exercise_text = st.text_input(
+        "輸入運動",
+        placeholder=(
+            "例如：慢跑20分鐘、快走40分鐘、"
+            "騎腳踏車1小時"
+        )
+    )
+
+
+    if st.button(
+        "✨ AI 計算運動消耗",
+        use_container_width=True
+    ):
+
+        if not exercise_text.strip():
+
+            st.warning(
+                "請先輸入運動內容"
+            )
+
+        else:
+
+            client = get_openai_client()
+
+            if client is None:
+
+                st.error(
+                    "尚未設定 OPENAI_API_KEY"
+                )
+
+            else:
+
+                with st.spinner(
+                    "AI 正在分析運動..."
+                ):
+
+                    try:
+
+                        response = (
+                            client.chat.completions.create(
+                                model="gpt-4o",
+                                messages=[
+                                    {
+                                        "role": "system",
+                                        "content": """
+你是一個運動紀錄分析助手。
+
+請從使用者輸入中判斷：
+
+1. 運動名稱
+2. 運動時間，單位分鐘
+3. 運動強度
+4. 合理的 MET 值
+
+MET 請依一般成人 Physical Activity Compendium
+常見活動強度估算。
+
+如果使用者有提供速度、坡度或強度，
+請依該資訊判斷。
+
+如果資訊不完整，
+使用合理的一般強度估算。
+
+只回傳 JSON。
+
+格式：
+
+{
+  "exercise_name": "慢跑",
+  "minutes": 20,
+  "intensity": "一般",
+  "met": 7.5
+}
+
+不要自行計算卡路里。
+"""
+                                    },
+                                    {
+                                        "role": "user",
+                                        "content":
+                                        exercise_text
+                                    }
+                                ],
+                                max_tokens=300
+                            )
+                        )
+
+                        res = (
+                            response
+                            .choices[0]
+                            .message
+                            .content
+                        )
+
+                        parsed = clean_ai_json(
+                            res
+                        )
+
+                        ex_ai_name = parsed.get(
+                            "exercise_name",
+                            exercise_text
+                        )
+
+                        ex_ai_minutes = safe_float(
+                            parsed.get(
+                                "minutes",
+                                0
+                            )
+                        )
+
+                        ex_ai_met = safe_float(
+                            parsed.get(
+                                "met",
+                                0
+                            )
+                        )
+
+                        ex_ai_intensity = parsed.get(
+                            "intensity",
+                            ""
+                        )
+
+                        estimated_cal = (
+                            calculate_exercise_calories(
+                                weight_kg=weight,
+                                met=ex_ai_met,
+                                minutes=ex_ai_minutes
+                            )
+                        )
+
+                        st.session_state.ai_exercise = {
+                            "name":
+                            ex_ai_name,
+
+                            "minutes":
+                            ex_ai_minutes,
+
+                            "met":
+                            ex_ai_met,
+
+                            "intensity":
+                            ex_ai_intensity,
+
+                            "calories":
+                            estimated_cal
+                        }
+
+                        st.rerun()
+
+                    except Exception as e:
+
+                        st.error(
+                            f"運動辨識失敗：{e}"
+                        )
+
 
     default_ex_name = (
         old_record.get(
@@ -1373,19 +1539,70 @@ with tab1:
         else 0
     )
 
+
+    if st.session_state.ai_exercise:
+
+        ai_ex = (
+            st.session_state.ai_exercise
+        )
+
+        st.success(
+            "AI 運動分析完成"
+        )
+
+        st.write(
+            f"**運動：** {ai_ex['name']}"
+        )
+
+        st.write(
+            f"**時間：** {ai_ex['minutes']:.0f} 分鐘"
+        )
+
+        st.write(
+            f"**強度：** {ai_ex['intensity']}"
+        )
+
+        st.write(
+            f"**MET：** {ai_ex['met']:.1f}"
+        )
+
+        st.metric(
+            "🔥 估計消耗",
+            f"{ai_ex['calories']} kcal"
+        )
+
+        default_ex_name = (
+            f"{ai_ex['name']} "
+            f"{ai_ex['minutes']:.0f}分鐘"
+        )
+
+        default_ex_cal = (
+            ai_ex["calories"]
+        )
+
+
     ex_name = st.text_input(
         "運動項目",
         value=(
             default_ex_name
             or ""
-        )
+        ),
+        key="exercise_name_final"
     )
 
     ex_cal = st.number_input(
         "運動消耗 kcal",
         min_value=0,
-        value=default_ex_cal,
-        step=10
+        value=safe_int(
+            default_ex_cal
+        ),
+        step=10,
+        key="exercise_cal_final"
+    )
+
+    st.caption(
+        "運動消耗為估算值，實際值會因速度、坡度、心率、"
+        "體能與運動效率而不同。"
     )
 
 
@@ -1539,10 +1756,6 @@ with tab2:
         )
 
 
-        # =================================================
-        # 單日營養
-        # =================================================
-
         st.markdown("---")
 
         st.write(
@@ -1605,26 +1818,40 @@ with tab2:
             )
         )
 
-        c1, c2, c3, c4 = st.columns(
-            4
+        ex_day = safe_float(
+            selected_row.get(
+                "ex_cal",
+                0
+            )
         )
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.metric(
+                "攝取熱量",
+                f"{cal:.0f} kcal"
+            )
+
+        with c2:
+            st.metric(
+                "運動消耗",
+                f"{ex_day:.0f} kcal"
+            )
+
+        c1, c2, c3 = st.columns(3)
 
         c1.metric(
-            "熱量",
-            f"{cal:.0f}"
-        )
-
-        c2.metric(
-            "蛋白",
+            "蛋白質",
             f"{pro:.1f}g"
         )
 
-        c3.metric(
+        c2.metric(
             "脂肪",
             f"{fat:.1f}g"
         )
 
-        c4.metric(
+        c3.metric(
             "碳水",
             f"{carb:.1f}g"
         )
@@ -1756,6 +1983,22 @@ with tab3:
             .astype(int)
         )
 
+        display_df["運動"] = (
+            display_df["ex_name"]
+            .fillna("")
+        )
+
+        display_df["運動消耗"] = (
+            pd.to_numeric(
+                display_df[
+                    "ex_cal"
+                ],
+                errors="coerce"
+            )
+            .fillna(0)
+            .astype(int)
+        )
+
         display_df["蛋白質"] = (
             pd.to_numeric(
                 display_df[
@@ -1793,6 +2036,8 @@ with tab3:
             "日期",
             "體重",
             "熱量",
+            "運動",
+            "運動消耗",
             "蛋白質",
             "脂肪",
             "碳水"
@@ -1806,10 +2051,6 @@ with tab3:
             use_container_width=True
         )
 
-
-        # =================================================
-        # 下載
-        # =================================================
 
         csv_data = (
             display_df[
@@ -1832,10 +2073,6 @@ with tab3:
             mime="text/csv"
         )
 
-
-        # =================================================
-        # 編輯過往紀錄
-        # =================================================
 
         st.markdown("---")
 
@@ -1976,41 +2213,9 @@ with tab3:
                 key=(
                     f"history_food_editor_"
                     f"{selected_edit_date}"
-                ),
-                column_config={
-                    "name":
-                    st.column_config.TextColumn(
-                        "食物"
-                    ),
-
-                    "portion":
-                    st.column_config.TextColumn(
-                        "份量"
-                    ),
-
-                    "calories":
-                    st.column_config.NumberColumn(
-                        "熱量"
-                    ),
-
-                    "protein":
-                    st.column_config.NumberColumn(
-                        "蛋白質"
-                    ),
-
-                    "fat":
-                    st.column_config.NumberColumn(
-                        "脂肪"
-                    ),
-
-                    "carbs":
-                    st.column_config.NumberColumn(
-                        "碳水"
-                    )
-                }
+                )
             )
         )
-
 
         col_update, col_delete = (
             st.columns(2)
