@@ -16,7 +16,7 @@ from supabase import create_client
 # =========================================================
 
 st.set_page_config(
-    page_title="Shing & Gloria 健康追蹤器",
+    page_title="健康與體態追蹤器",
     page_icon="⚖️",
     layout="centered"
 )
@@ -44,7 +44,7 @@ st.markdown(
     }
 
     div[data-testid="stMetricValue"] {
-        font-size: 25px !important;
+        font-size: 24px !important;
     }
 
     .block-container {
@@ -95,41 +95,95 @@ supabase = get_supabase()
 
 
 # =========================================================
+# OpenAI
+# =========================================================
+
+@st.cache_resource
+def get_openai_client():
+
+    api_key = st.secrets.get(
+        "OPENAI_API_KEY",
+        ""
+    )
+
+    if not api_key:
+        return None
+
+    return OpenAI(
+        api_key=api_key
+    )
+
+
+# =========================================================
 # 共用函式
 # =========================================================
 
 def safe_float(value, default=0):
+
     try:
         if value is None:
             return default
+
         return float(value)
+
     except:
         return default
 
 
 def safe_int(value, default=0):
+
     try:
         if value is None:
             return default
-        return int(round(float(value)))
+
+        return int(
+            round(
+                float(value)
+            )
+        )
+
     except:
         return default
 
 
 def simple_date(value):
-    """
-    2026-08-18 -> 8/18
-    """
+
     try:
-        d = pd.to_datetime(value)
+        d = pd.to_datetime(
+            value
+        )
+
         return f"{d.month}/{d.day}"
+
     except:
         return str(value)
 
 
+def clean_ai_json(text):
+
+    if not text:
+        return {}
+
+    text = (
+        text
+        .replace("```json", "")
+        .replace("```", "")
+        .strip()
+    )
+
+    return json.loads(
+        text
+    )
+
+
+# =========================================================
+# Daily Logs
+# =========================================================
+
 def get_daily_logs(person):
 
     try:
+
         response = (
             supabase
             .table("daily_logs")
@@ -139,22 +193,35 @@ def get_daily_logs(person):
             .execute()
         )
 
-        return pd.DataFrame(response.data or [])
+        return pd.DataFrame(
+            response.data or []
+        )
 
     except Exception as e:
-        st.error(f"讀取每日紀錄失敗：{e}")
+
+        st.error(
+            f"讀取每日紀錄失敗：{e}"
+        )
+
         return pd.DataFrame()
 
 
-def get_daily_record(person, selected_date):
+def get_daily_record(
+    person,
+    selected_date
+):
 
     try:
+
         response = (
             supabase
             .table("daily_logs")
             .select("*")
             .eq("person", person)
-            .eq("date", str(selected_date))
+            .eq(
+                "date",
+                str(selected_date)
+            )
             .execute()
         )
 
@@ -164,7 +231,11 @@ def get_daily_record(person, selected_date):
         return None
 
     except Exception as e:
-        st.error(f"讀取紀錄失敗：{e}")
+
+        st.error(
+            f"讀取紀錄失敗：{e}"
+        )
+
         return None
 
 
@@ -178,36 +249,58 @@ def save_daily_record(
 ):
 
     total_cal = sum(
-        safe_float(f.get("calories", 0))
+        safe_float(
+            f.get("calories", 0)
+        )
         for f in foods
     )
 
     total_pro = sum(
-        safe_float(f.get("protein", 0))
+        safe_float(
+            f.get("protein", 0)
+        )
         for f in foods
     )
 
     total_fat = sum(
-        safe_float(f.get("fat", 0))
+        safe_float(
+            f.get("fat", 0)
+        )
         for f in foods
     )
 
     total_carb = sum(
-        safe_float(f.get("carbs", 0))
+        safe_float(
+            f.get("carbs", 0)
+        )
         for f in foods
     )
 
     payload = {
         "person": person,
         "date": str(record_date),
-        "weight": round(float(weight), 2),
+        "weight": round(
+            float(weight),
+            2
+        ),
         "ex_name": ex_name or "",
         "ex_cal": safe_int(ex_cal),
         "items_json": foods,
-        "total_calories": safe_int(total_cal),
-        "total_protein": round(total_pro, 1),
-        "total_fat": round(total_fat, 1),
-        "total_carbs": round(total_carb, 1)
+        "total_calories": safe_int(
+            total_cal
+        ),
+        "total_protein": round(
+            total_pro,
+            1
+        ),
+        "total_fat": round(
+            total_fat,
+            1
+        ),
+        "total_carbs": round(
+            total_carb,
+            1
+        )
     }
 
     existing = get_daily_record(
@@ -218,15 +311,20 @@ def save_daily_record(
     try:
 
         if existing:
+
             (
                 supabase
                 .table("daily_logs")
                 .update(payload)
-                .eq("id", existing["id"])
+                .eq(
+                    "id",
+                    existing["id"]
+                )
                 .execute()
             )
 
         else:
+
             (
                 supabase
                 .table("daily_logs")
@@ -237,31 +335,52 @@ def save_daily_record(
         return True
 
     except Exception as e:
-        st.error(f"儲存失敗：{e}")
+
+        st.error(
+            f"儲存失敗：{e}"
+        )
+
         return False
 
 
-def delete_daily_record(record_id):
+def delete_daily_record(
+    record_id
+):
 
     try:
+
         (
             supabase
             .table("daily_logs")
             .delete()
-            .eq("id", record_id)
+            .eq(
+                "id",
+                record_id
+            )
             .execute()
         )
 
         return True
 
     except Exception as e:
-        st.error(f"刪除失敗：{e}")
+
+        st.error(
+            f"刪除失敗：{e}"
+        )
+
         return False
 
 
-def get_inbody_logs(person):
+# =========================================================
+# InBody
+# =========================================================
+
+def get_inbody_logs(
+    person
+):
 
     try:
+
         response = (
             supabase
             .table("inbody_logs")
@@ -271,22 +390,35 @@ def get_inbody_logs(person):
             .execute()
         )
 
-        return pd.DataFrame(response.data or [])
+        return pd.DataFrame(
+            response.data or []
+        )
 
     except Exception as e:
-        st.error(f"讀取 InBody 失敗：{e}")
+
+        st.error(
+            f"讀取 InBody 失敗：{e}"
+        )
+
         return pd.DataFrame()
 
 
-def get_inbody_record(person, selected_date):
+def get_inbody_record(
+    person,
+    selected_date
+):
 
     try:
+
         response = (
             supabase
             .table("inbody_logs")
             .select("*")
             .eq("person", person)
-            .eq("date", str(selected_date))
+            .eq(
+                "date",
+                str(selected_date)
+            )
             .execute()
         )
 
@@ -296,7 +428,11 @@ def get_inbody_record(person, selected_date):
         return None
 
     except Exception as e:
-        st.error(f"讀取 InBody 紀錄失敗：{e}")
+
+        st.error(
+            f"讀取 InBody 紀錄失敗：{e}"
+        )
+
         return None
 
 
@@ -312,9 +448,18 @@ def save_inbody_record(
     payload = {
         "person": person,
         "date": str(record_date),
-        "weight": round(float(weight), 2),
-        "body_fat": round(float(body_fat), 2),
-        "muscle": round(float(muscle), 2),
+        "weight": round(
+            float(weight),
+            2
+        ),
+        "body_fat": round(
+            float(body_fat),
+            2
+        ),
+        "muscle": round(
+            float(muscle),
+            2
+        ),
         "bmr": safe_int(bmr)
     }
 
@@ -326,15 +471,20 @@ def save_inbody_record(
     try:
 
         if existing:
+
             (
                 supabase
                 .table("inbody_logs")
                 .update(payload)
-                .eq("id", existing["id"])
+                .eq(
+                    "id",
+                    existing["id"]
+                )
                 .execute()
             )
 
         else:
+
             (
                 supabase
                 .table("inbody_logs")
@@ -345,25 +495,39 @@ def save_inbody_record(
         return True
 
     except Exception as e:
-        st.error(f"InBody 儲存失敗：{e}")
+
+        st.error(
+            f"InBody 儲存失敗：{e}"
+        )
+
         return False
 
 
-def delete_inbody_record(record_id):
+def delete_inbody_record(
+    record_id
+):
 
     try:
+
         (
             supabase
             .table("inbody_logs")
             .delete()
-            .eq("id", record_id)
+            .eq(
+                "id",
+                record_id
+            )
             .execute()
         )
 
         return True
 
     except Exception as e:
-        st.error(f"InBody 刪除失敗：{e}")
+
+        st.error(
+            f"InBody 刪除失敗：{e}"
+        )
+
         return False
 
 
@@ -379,10 +543,12 @@ if "loaded_food_key" not in st.session_state:
 
 
 # =========================================================
-# 標題 / 使用者
+# 標題
 # =========================================================
 
-st.title("健康與體態追蹤系統")
+st.title(
+    "健康與體態追蹤系統"
+)
 
 person = st.radio(
     "選擇使用者",
@@ -403,12 +569,14 @@ tab1, tab2, tab3, tab4 = st.tabs(
 
 
 # =========================================================
-# TAB 1 紀錄
+# TAB 1
 # =========================================================
 
 with tab1:
 
-    st.subheader(f"每日紀錄｜{person}")
+    st.subheader(
+        f"每日紀錄｜{person}"
+    )
 
     record_date = st.date_input(
         "日期",
@@ -417,15 +585,19 @@ with tab1:
         key="record_date"
     )
 
-    session_key = f"{person}_{record_date}"
+    session_key = (
+        f"{person}_{record_date}"
+    )
 
     old_record = get_daily_record(
         person,
         record_date
     )
 
-    # 日期切換時載入當天舊資料
-    if st.session_state.loaded_food_key != session_key:
+    if (
+        st.session_state.loaded_food_key
+        != session_key
+    ):
 
         if old_record:
 
@@ -434,23 +606,37 @@ with tab1:
                 []
             )
 
-            if isinstance(old_items, str):
+            if isinstance(
+                old_items,
+                str
+            ):
+
                 try:
-                    old_items = json.loads(old_items)
+                    old_items = json.loads(
+                        old_items
+                    )
+
                 except:
                     old_items = []
 
-            st.session_state.current_foods = old_items or []
+            st.session_state.current_foods = (
+                old_items or []
+            )
 
         else:
+
             st.session_state.current_foods = []
 
-        st.session_state.loaded_food_key = session_key
+        st.session_state.loaded_food_key = (
+            session_key
+        )
 
 
     default_weight = (
         safe_float(
-            old_record.get("weight"),
+            old_record.get(
+                "weight"
+            ),
             60
         )
         if old_record
@@ -461,60 +647,233 @@ with tab1:
         "體重 (kg)",
         min_value=30.0,
         max_value=200.0,
-        value=float(default_weight),
+        value=float(
+            default_weight
+        ),
         step=0.1,
         format="%.1f"
     )
 
 
     # =====================================================
-    # 飲食
+    # 飲食輸入
     # =====================================================
 
     st.markdown("---")
-    st.subheader("🍱 飲食紀錄")
-
-    uploaded_file = st.file_uploader(
-        "拍照辨識飲食",
-        type=["jpg", "jpeg", "png"]
+    st.subheader(
+        "🍱 飲食紀錄"
     )
 
-    if uploaded_file and st.button(
-        "✨ 開始 AI 辨識"
+
+    # =====================================================
+    # 文字 AI 辨識
+    # =====================================================
+
+    st.write(
+        "### ✍️ 文字快速輸入"
+    )
+
+    food_text = st.text_area(
+        "輸入食物與份量",
+        placeholder=(
+            "例如：\n"
+            "茶葉蛋兩顆\n"
+            "無糖豆漿400ml\n"
+            "地瓜100g\n\n"
+            "也可以一次輸入整餐"
+        ),
+        height=120
+    )
+
+    if st.button(
+        "✨ AI 分析文字食物",
+        use_container_width=True
     ):
 
-        with st.spinner("AI 正在辨識餐點..."):
+        if not food_text.strip():
 
-            try:
+            st.warning(
+                "請先輸入食物"
+            )
 
-                bytes_data = uploaded_file.getvalue()
+        else:
 
-                base64_image = base64.b64encode(
-                    bytes_data
-                ).decode("utf-8")
+            client = get_openai_client()
 
-                api_key = st.secrets.get(
-                    "OPENAI_API_KEY",
-                    ""
+            if client is None:
+
+                st.error(
+                    "尚未設定 OPENAI_API_KEY"
                 )
 
-                if not api_key:
-                    st.error("尚未設定 OPENAI_API_KEY")
-                    st.stop()
+            else:
 
-                client = OpenAI(
-                    api_key=api_key
-                )
+                with st.spinner(
+                    "AI 正在分析營養素..."
+                ):
 
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
+                    try:
+
+                        response = (
+                            client.chat.completions.create(
+                                model="gpt-4o",
+                                messages=[
+                                    {
+                                        "role": "system",
+                                        "content": """
+你是一個飲食營養分析助手。
+
+根據使用者提供的食物名稱與份量，
+估算每一項食物的：
+
+- 食物名稱
+- 份量
+- 熱量 kcal
+- 蛋白質 g
+- 脂肪 g
+- 碳水化合物 g
+
+要求：
+1. 如果一次輸入多種食物，拆成多個 items。
+2. 如果份量不明確，使用合理的常見份量估算。
+3. 數值使用合理的營養估算值。
+4. 不要回傳任何解釋。
+5. 只回傳 JSON。
+
+格式：
+
+{
+  "items": [
+    {
+      "name": "茶葉蛋",
+      "portion": "2顆",
+      "calories": 150,
+      "protein": 13,
+      "fat": 10,
+      "carbs": 3
+    }
+  ]
+}
+"""
+                                    },
+                                    {
+                                        "role": "user",
+                                        "content": food_text
+                                    }
+                                ],
+                                max_tokens=700
+                            )
+                        )
+
+                        res = (
+                            response
+                            .choices[0]
+                            .message
+                            .content
+                        )
+
+                        parsed = clean_ai_json(
+                            res
+                        )
+
+                        new_items = parsed.get(
+                            "items",
+                            []
+                        )
+
+                        if new_items:
+
+                            st.session_state.current_foods.extend(
+                                new_items
+                            )
+
+                            st.success(
+                                f"已加入 {len(new_items)} 項食物"
+                            )
+
+                            st.rerun()
+
+                        else:
+
+                            st.warning(
+                                "AI 沒有辨識到食物"
+                            )
+
+                    except Exception as e:
+
+                        st.error(
+                            f"文字辨識失敗：{e}"
+                        )
+
+
+    # =====================================================
+    # 圖片 AI 辨識
+    # =====================================================
+
+    st.markdown("---")
+
+    st.write(
+        "### 📷 拍照辨識"
+    )
+
+    uploaded_file = st.file_uploader(
+        "拍照或選擇餐點照片",
+        type=[
+            "jpg",
+            "jpeg",
+            "png"
+        ]
+    )
+
+    if (
+        uploaded_file
+        and st.button(
+            "✨ 開始 AI 辨識",
+            use_container_width=True
+        )
+    ):
+
+        client = get_openai_client()
+
+        if client is None:
+
+            st.error(
+                "尚未設定 OPENAI_API_KEY"
+            )
+
+        else:
+
+            with st.spinner(
+                "AI 正在辨識餐點..."
+            ):
+
+                try:
+
+                    bytes_data = (
+                        uploaded_file
+                        .getvalue()
+                    )
+
+                    base64_image = (
+                        base64
+                        .b64encode(
+                            bytes_data
+                        )
+                        .decode(
+                            "utf-8"
+                        )
+                    )
+
+                    response = (
+                        client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=[
                                 {
-                                    "type": "text",
-                                    "text": """
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": """
 請辨識照片中的食物。
 
 估計每項食物：
@@ -524,6 +883,9 @@ with tab1:
 蛋白質 g
 脂肪 g
 碳水化合物 g
+
+如果有多項食物，
+請拆成多個 items。
 
 只回傳 JSON。
 
@@ -541,55 +903,69 @@ with tab1:
   ]
 }
 """
-                                },
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url":
-                                        f"data:image/jpeg;base64,{base64_image}"
-                                    }
+                                        },
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url":
+                                                f"data:image/jpeg;base64,{base64_image}"
+                                            }
+                                        }
+                                    ]
                                 }
-                            ]
-                        }
-                    ],
-                    max_tokens=700
-                )
+                            ],
+                            max_tokens=700
+                        )
+                    )
 
-                res = (
-                    response
-                    .choices[0]
-                    .message
-                    .content
-                )
+                    res = (
+                        response
+                        .choices[0]
+                        .message
+                        .content
+                    )
 
-                res = (
-                    res
-                    .replace("```json", "")
-                    .replace("```", "")
-                    .strip()
-                )
+                    parsed = clean_ai_json(
+                        res
+                    )
 
-                parsed = json.loads(res)
-
-                st.session_state.current_foods.extend(
-                    parsed.get(
+                    new_items = parsed.get(
                         "items",
                         []
                     )
-                )
 
-                st.success("AI 辨識完成")
-                st.rerun()
+                    if new_items:
 
-            except Exception as e:
-                st.error(f"AI 辨識失敗：{e}")
+                        st.session_state.current_foods.extend(
+                            new_items
+                        )
+
+                        st.success(
+                            f"辨識完成，已加入 {len(new_items)} 項"
+                        )
+
+                        st.rerun()
+
+                    else:
+
+                        st.warning(
+                            "AI 沒有辨識到食物"
+                        )
+
+                except Exception as e:
+
+                    st.error(
+                        f"AI 辨識失敗：{e}"
+                    )
 
 
     # =====================================================
     # 手動新增
     # =====================================================
 
-    with st.expander("➕ 手動新增食物"):
+    with st.expander(
+        "➕ 手動新增食物"
+    ):
 
         m_name = st.text_input(
             "食物名稱"
@@ -597,7 +973,7 @@ with tab1:
 
         m_portion = st.text_input(
             "份量",
-            placeholder="例如：100g、1碗、1份"
+            placeholder="例如：100g、1碗、2顆"
         )
 
         m_cal = st.number_input(
@@ -628,27 +1004,39 @@ with tab1:
             step=1.0
         )
 
-        if st.button("加入食物"):
+        if st.button(
+            "加入食物"
+        ):
 
             st.session_state.current_foods.append(
                 {
                     "name":
-                    m_name if m_name else "自訂食物",
+                    m_name
+                    if m_name
+                    else "自訂食物",
 
                     "portion":
                     m_portion,
 
                     "calories":
-                    safe_int(m_cal),
+                    safe_int(
+                        m_cal
+                    ),
 
                     "protein":
-                    safe_float(m_pro),
+                    safe_float(
+                        m_pro
+                    ),
 
                     "fat":
-                    safe_float(m_fat),
+                    safe_float(
+                        m_fat
+                    ),
 
                     "carbs":
-                    safe_float(m_carb)
+                    safe_float(
+                        m_carb
+                    )
                 }
             )
 
@@ -656,12 +1044,15 @@ with tab1:
 
 
     # =====================================================
-    # 當天食物可直接編輯
+    # 當日食物
     # =====================================================
 
     if st.session_state.current_foods:
 
-        st.write("### 當日食物")
+        st.markdown("---")
+        st.write(
+            "### 當日食物"
+        )
 
         food_df = pd.DataFrame(
             st.session_state.current_foods
@@ -685,6 +1076,7 @@ with tab1:
                     "portion"
                 ]:
                     food_df[col] = ""
+
                 else:
                     food_df[col] = 0
 
@@ -737,7 +1129,12 @@ with tab1:
 
         cleaned_foods = []
 
-        for item in edited_food_df.to_dict("records"):
+        for item in (
+            edited_food_df
+            .to_dict(
+                "records"
+            )
+        ):
 
             cleaned_foods.append(
                 {
@@ -791,8 +1188,14 @@ with tab1:
                 }
             )
 
-        st.session_state.current_foods = cleaned_foods
+        st.session_state.current_foods = (
+            cleaned_foods
+        )
 
+
+        # =================================================
+        # 營養合計
+        # =================================================
 
         total_cal = sum(
             x["calories"]
@@ -814,16 +1217,14 @@ with tab1:
             for x in cleaned_foods
         )
 
-
-        # =================================================
-        # 今日總覽
-        # =================================================
-
-        st.write("### 今日營養")
+        st.write(
+            "### 今日營養"
+        )
 
         c1, c2 = st.columns(2)
 
         with c1:
+
             st.metric(
                 "總熱量",
                 f"{total_cal:.0f} kcal"
@@ -835,6 +1236,7 @@ with tab1:
             )
 
         with c2:
+
             st.metric(
                 "脂肪",
                 f"{total_fat:.1f} g"
@@ -847,12 +1249,20 @@ with tab1:
 
 
         # =================================================
-        # 當天圓餅圖
+        # 圓餅圖
         # =================================================
 
-        protein_kcal = total_pro * 4
-        fat_kcal = total_fat * 9
-        carb_kcal = total_carb * 4
+        protein_kcal = (
+            total_pro * 4
+        )
+
+        fat_kcal = (
+            total_fat * 9
+        )
+
+        carb_kcal = (
+            total_carb * 4
+        )
 
         macro_total = (
             protein_kcal
@@ -912,7 +1322,8 @@ with tab1:
                 fig,
                 use_container_width=True,
                 config={
-                    "displayModeBar": False
+                    "displayModeBar":
+                    False
                 }
             )
 
@@ -920,12 +1331,16 @@ with tab1:
         if st.button(
             "清空當日食物"
         ):
+
             st.session_state.current_foods = []
+
             st.rerun()
 
-
     else:
-        st.info("這一天尚未加入食物")
+
+        st.info(
+            "這一天尚未加入食物"
+        )
 
 
     # =====================================================
@@ -933,7 +1348,10 @@ with tab1:
     # =====================================================
 
     st.markdown("---")
-    st.subheader("🏋️ 運動紀錄")
+
+    st.subheader(
+        "🏋️ 運動紀錄"
+    )
 
     default_ex_name = (
         old_record.get(
@@ -957,7 +1375,10 @@ with tab1:
 
     ex_name = st.text_input(
         "運動項目",
-        value=default_ex_name or ""
+        value=(
+            default_ex_name
+            or ""
+        )
     )
 
     ex_cal = st.number_input(
@@ -973,9 +1394,11 @@ with tab1:
     # =====================================================
 
     if st.button(
-        "💾 更新這一天紀錄"
-        if old_record
-        else "💾 儲存這一天紀錄",
+        (
+            "💾 更新這一天紀錄"
+            if old_record
+            else "💾 儲存這一天紀錄"
+        ),
         type="primary"
     ):
 
@@ -985,11 +1408,18 @@ with tab1:
             weight=weight,
             ex_name=ex_name,
             ex_cal=ex_cal,
-            foods=st.session_state.current_foods
+            foods=(
+                st.session_state
+                .current_foods
+            )
         )
 
         if success:
-            st.success("紀錄已永久儲存！")
+
+            st.success(
+                "紀錄已永久儲存！"
+            )
+
             st.rerun()
 
 
@@ -999,7 +1429,9 @@ with tab1:
 
 with tab2:
 
-    st.subheader("📈 體重與營養趨勢")
+    st.subheader(
+        "📈 體重與營養趨勢"
+    )
 
     df = get_daily_logs(
         person
@@ -1021,11 +1453,9 @@ with tab2:
         )
 
 
-        # =================================================
-        # 體重圖
-        # =================================================
-
-        st.write("### 體重變化")
+        st.write(
+            "### 體重變化"
+        )
 
         fig_weight = go.Figure()
 
@@ -1042,21 +1472,34 @@ with tab2:
             )
         )
 
-        valid_weight = df["weight"].dropna()
+        valid_weight = (
+            df["weight"]
+            .dropna()
+        )
 
         if not valid_weight.empty:
 
-            min_weight = valid_weight.min()
-            max_weight = valid_weight.max()
+            min_weight = (
+                valid_weight.min()
+            )
+
+            max_weight = (
+                valid_weight.max()
+            )
 
             lower = max(
                 30,
                 min_weight - 2
             )
 
-            upper = max_weight + 2
+            upper = (
+                max_weight + 2
+            )
 
-            if upper - lower < 5:
+            if (
+                upper - lower
+                < 5
+            ):
                 upper = lower + 5
 
             fig_weight.update_yaxes(
@@ -1090,17 +1533,21 @@ with tab2:
             fig_weight,
             use_container_width=True,
             config={
-                "displayModeBar": False
+                "displayModeBar":
+                False
             }
         )
 
 
         # =================================================
-        # 當日營養圓餅圖
+        # 單日營養
         # =================================================
 
         st.markdown("---")
-        st.write("### 單日營養比例")
+
+        st.write(
+            "### 單日營養比例"
+        )
 
         available_dates = (
             df["date"]
@@ -1108,17 +1555,27 @@ with tab2:
             .tolist()
         )
 
-        selected_macro_date = st.selectbox(
-            "選擇日期",
-            options=available_dates,
-            index=len(available_dates) - 1,
-            format_func=lambda x: f"{x.month}/{x.day}"
+        selected_macro_date = (
+            st.selectbox(
+                "選擇日期",
+                options=available_dates,
+                index=(
+                    len(
+                        available_dates
+                    ) - 1
+                ),
+                format_func=lambda x:
+                f"{x.month}/{x.day}"
+            )
         )
 
-        selected_row = df[
-            df["date"].dt.date
-            == selected_macro_date
-        ].iloc[-1]
+        selected_row = (
+            df[
+                df["date"].dt.date
+                == selected_macro_date
+            ]
+            .iloc[-1]
+        )
 
         pro = safe_float(
             selected_row.get(
@@ -1148,7 +1605,9 @@ with tab2:
             )
         )
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4 = st.columns(
+            4
+        )
 
         c1.metric(
             "熱量",
@@ -1185,7 +1644,11 @@ with tab2:
             }
         )
 
-        if macro_df["熱量"].sum() > 0:
+        if (
+            macro_df["熱量"]
+            .sum()
+            > 0
+        ):
 
             macro_chart = px.pie(
                 macro_df,
@@ -1195,7 +1658,9 @@ with tab2:
             )
 
             macro_chart.update_traces(
-                textinfo="percent+label",
+                textinfo=(
+                    "percent+label"
+                ),
                 textposition="inside"
             )
 
@@ -1217,16 +1682,19 @@ with tab2:
                 macro_chart,
                 use_container_width=True,
                 config={
-                    "displayModeBar": False
+                    "displayModeBar":
+                    False
                 }
             )
 
         else:
+
             st.info(
                 "這一天沒有營養素資料"
             )
 
     else:
+
         st.info(
             "尚無歷史資料"
         )
@@ -1238,7 +1706,9 @@ with tab2:
 
 with tab3:
 
-    st.subheader("📋 歷史紀錄")
+    st.subheader(
+        "📋 歷史紀錄"
+    )
 
     history_df = get_daily_logs(
         person
@@ -1246,43 +1716,78 @@ with tab3:
 
     if not history_df.empty:
 
-        history_df = history_df.sort_values(
-            "date",
-            ascending=False
+        history_df = (
+            history_df
+            .sort_values(
+                "date",
+                ascending=False
+            )
         )
 
-        display_df = history_df.copy()
-
-        display_df["日期"] = display_df[
-            "date"
-        ].apply(
-            simple_date
+        display_df = (
+            history_df.copy()
         )
 
-        display_df["體重"] = pd.to_numeric(
-            display_df["weight"],
-            errors="coerce"
-        ).round(1)
+        display_df["日期"] = (
+            display_df["date"]
+            .apply(
+                simple_date
+            )
+        )
 
-        display_df["熱量"] = pd.to_numeric(
-            display_df["total_calories"],
-            errors="coerce"
-        ).fillna(0).astype(int)
+        display_df["體重"] = (
+            pd.to_numeric(
+                display_df[
+                    "weight"
+                ],
+                errors="coerce"
+            )
+            .round(1)
+        )
 
-        display_df["蛋白質"] = pd.to_numeric(
-            display_df["total_protein"],
-            errors="coerce"
-        ).fillna(0).round(1)
+        display_df["熱量"] = (
+            pd.to_numeric(
+                display_df[
+                    "total_calories"
+                ],
+                errors="coerce"
+            )
+            .fillna(0)
+            .astype(int)
+        )
 
-        display_df["脂肪"] = pd.to_numeric(
-            display_df["total_fat"],
-            errors="coerce"
-        ).fillna(0).round(1)
+        display_df["蛋白質"] = (
+            pd.to_numeric(
+                display_df[
+                    "total_protein"
+                ],
+                errors="coerce"
+            )
+            .fillna(0)
+            .round(1)
+        )
 
-        display_df["碳水"] = pd.to_numeric(
-            display_df["total_carbs"],
-            errors="coerce"
-        ).fillna(0).round(1)
+        display_df["脂肪"] = (
+            pd.to_numeric(
+                display_df[
+                    "total_fat"
+                ],
+                errors="coerce"
+            )
+            .fillna(0)
+            .round(1)
+        )
+
+        display_df["碳水"] = (
+            pd.to_numeric(
+                display_df[
+                    "total_carbs"
+                ],
+                errors="coerce"
+            )
+            .fillna(0)
+            .round(1)
+        )
 
         show_cols = [
             "日期",
@@ -1303,96 +1808,125 @@ with tab3:
 
 
         # =================================================
-        # 下載 CSV
+        # 下載
         # =================================================
 
-        download_df = display_df[
-            show_cols
-        ].copy()
-
-        csv_data = download_df.to_csv(
-            index=False
-        ).encode(
-            "utf-8-sig"
+        csv_data = (
+            display_df[
+                show_cols
+            ]
+            .to_csv(
+                index=False
+            )
+            .encode(
+                "utf-8-sig"
+            )
         )
 
         st.download_button(
             "⬇️ 下載歷史紀錄 CSV",
             data=csv_data,
-            file_name=f"{person}_健康紀錄.csv",
+            file_name=(
+                f"{person}_健康紀錄.csv"
+            ),
             mime="text/csv"
         )
 
 
         # =================================================
-        # 編輯指定舊紀錄
+        # 編輯過往紀錄
         # =================================================
 
         st.markdown("---")
-        st.write("### 編輯過往紀錄")
 
-        edit_dates = history_df[
-            "date"
-        ].tolist()
-
-        selected_edit_date = st.selectbox(
-            "選擇要編輯的日期",
-            options=edit_dates,
-            format_func=simple_date,
-            key="history_edit_date"
+        st.write(
+            "### 編輯過往紀錄"
         )
 
-        selected_history = history_df[
+        edit_dates = (
             history_df["date"]
-            == selected_edit_date
-        ].iloc[0]
-
-        edit_weight = st.number_input(
-            "體重",
-            min_value=30.0,
-            max_value=200.0,
-            value=safe_float(
-                selected_history.get(
-                    "weight",
-                    60
-                )
-            ),
-            step=0.1,
-            key="edit_weight"
+            .tolist()
         )
 
-        edit_ex_name = st.text_input(
-            "運動項目",
-            value=selected_history.get(
-                "ex_name",
-                ""
-            ) or "",
-            key="edit_ex_name"
+        selected_edit_date = (
+            st.selectbox(
+                "選擇要編輯的日期",
+                options=edit_dates,
+                format_func=simple_date,
+                key="history_edit_date"
+            )
         )
 
-        edit_ex_cal = st.number_input(
-            "運動消耗",
-            min_value=0,
-            value=safe_int(
-                selected_history.get(
-                    "ex_cal",
-                    0
-                )
-            ),
-            step=10,
-            key="edit_ex_cal"
+        selected_history = (
+            history_df[
+                history_df["date"]
+                == selected_edit_date
+            ]
+            .iloc[0]
         )
 
-        raw_items = selected_history.get(
-            "items_json",
-            []
+        edit_weight = (
+            st.number_input(
+                "體重",
+                min_value=30.0,
+                max_value=200.0,
+                value=safe_float(
+                    selected_history.get(
+                        "weight",
+                        60
+                    )
+                ),
+                step=0.1,
+                key="edit_weight"
+            )
         )
 
-        if isinstance(raw_items, str):
+        edit_ex_name = (
+            st.text_input(
+                "運動項目",
+                value=(
+                    selected_history.get(
+                        "ex_name",
+                        ""
+                    )
+                    or ""
+                ),
+                key="edit_ex_name"
+            )
+        )
+
+        edit_ex_cal = (
+            st.number_input(
+                "運動消耗",
+                min_value=0,
+                value=safe_int(
+                    selected_history.get(
+                        "ex_cal",
+                        0
+                    )
+                ),
+                step=10,
+                key="edit_ex_cal"
+            )
+        )
+
+        raw_items = (
+            selected_history.get(
+                "items_json",
+                []
+            )
+        )
+
+        if isinstance(
+            raw_items,
+            str
+        ):
+
             try:
                 raw_items = json.loads(
                     raw_items
                 )
+
             except:
                 raw_items = []
 
@@ -1408,7 +1942,11 @@ with tab3:
             "fat",
             "carbs"
         ]:
-            if col not in edit_food_df.columns:
+
+            if col not in (
+                edit_food_df.columns
+            ):
+
                 edit_food_df[col] = (
                     ""
                     if col in [
@@ -1429,47 +1967,54 @@ with tab3:
             ]
         ]
 
-        edited_history_foods = st.data_editor(
-            edit_food_df,
-            hide_index=True,
-            num_rows="dynamic",
-            use_container_width=True,
-            key=f"history_food_editor_{selected_edit_date}",
-            column_config={
-                "name":
-                st.column_config.TextColumn(
-                    "食物"
+        edited_history_foods = (
+            st.data_editor(
+                edit_food_df,
+                hide_index=True,
+                num_rows="dynamic",
+                use_container_width=True,
+                key=(
+                    f"history_food_editor_"
+                    f"{selected_edit_date}"
                 ),
+                column_config={
+                    "name":
+                    st.column_config.TextColumn(
+                        "食物"
+                    ),
 
-                "portion":
-                st.column_config.TextColumn(
-                    "份量"
-                ),
+                    "portion":
+                    st.column_config.TextColumn(
+                        "份量"
+                    ),
 
-                "calories":
-                st.column_config.NumberColumn(
-                    "熱量"
-                ),
+                    "calories":
+                    st.column_config.NumberColumn(
+                        "熱量"
+                    ),
 
-                "protein":
-                st.column_config.NumberColumn(
-                    "蛋白質"
-                ),
+                    "protein":
+                    st.column_config.NumberColumn(
+                        "蛋白質"
+                    ),
 
-                "fat":
-                st.column_config.NumberColumn(
-                    "脂肪"
-                ),
+                    "fat":
+                    st.column_config.NumberColumn(
+                        "脂肪"
+                    ),
 
-                "carbs":
-                st.column_config.NumberColumn(
-                    "碳水"
-                )
-            }
+                    "carbs":
+                    st.column_config.NumberColumn(
+                        "碳水"
+                    )
+                }
+            )
         )
 
 
-        col_update, col_delete = st.columns(2)
+        col_update, col_delete = (
+            st.columns(2)
+        )
 
         with col_update:
 
@@ -1480,8 +2025,11 @@ with tab3:
 
                 foods = []
 
-                for item in edited_history_foods.to_dict(
-                    "records"
+                for item in (
+                    edited_history_foods
+                    .to_dict(
+                        "records"
+                    )
                 ):
 
                     foods.append(
@@ -1536,17 +2084,23 @@ with tab3:
                         }
                     )
 
-                success = save_daily_record(
-                    person=person,
-                    record_date=selected_edit_date,
-                    weight=edit_weight,
-                    ex_name=edit_ex_name,
-                    ex_cal=edit_ex_cal,
-                    foods=foods
+                success = (
+                    save_daily_record(
+                        person=person,
+                        record_date=selected_edit_date,
+                        weight=edit_weight,
+                        ex_name=edit_ex_name,
+                        ex_cal=edit_ex_cal,
+                        foods=foods
+                    )
                 )
 
                 if success:
-                    st.success("修改完成")
+
+                    st.success(
+                        "修改完成"
+                    )
+
                     st.rerun()
 
 
@@ -1556,16 +2110,24 @@ with tab3:
                 "🗑️ 刪除這筆"
             ):
 
-                success = delete_daily_record(
-                    selected_history["id"]
+                success = (
+                    delete_daily_record(
+                        selected_history[
+                            "id"
+                        ]
+                    )
                 )
 
                 if success:
-                    st.success("已刪除")
+
+                    st.success(
+                        "已刪除"
+                    )
+
                     st.rerun()
 
-
     else:
+
         st.info(
             "尚無歷史紀錄"
         )
@@ -1662,9 +2224,11 @@ with tab4:
     )
 
     if st.button(
-        "💾 更新 InBody"
-        if old_ib
-        else "💾 儲存 InBody",
+        (
+            "💾 更新 InBody"
+            if old_ib
+            else "💾 儲存 InBody"
+        ),
         type="primary"
     ):
 
@@ -1678,15 +2242,13 @@ with tab4:
         )
 
         if success:
+
             st.success(
                 "InBody 已永久儲存！"
             )
+
             st.rerun()
 
-
-    # =====================================================
-    # InBody 歷史
-    # =====================================================
 
     ib_df = get_inbody_logs(
         person
@@ -1694,16 +2256,24 @@ with tab4:
 
     if not ib_df.empty:
 
-        ib_df["date"] = pd.to_datetime(
-            ib_df["date"]
+        ib_df["date"] = (
+            pd.to_datetime(
+                ib_df["date"]
+            )
         )
 
-        ib_df = ib_df.sort_values(
-            "date"
+        ib_df = (
+            ib_df
+            .sort_values(
+                "date"
+            )
         )
 
         st.markdown("---")
-        st.write("### InBody 體重趨勢")
+
+        st.write(
+            "### InBody 體重趨勢"
+        )
 
         fig_ib = go.Figure()
 
@@ -1711,7 +2281,9 @@ with tab4:
             go.Scatter(
                 x=ib_df["date"],
                 y=pd.to_numeric(
-                    ib_df["weight"],
+                    ib_df[
+                        "weight"
+                    ],
                     errors="coerce"
                 ),
                 mode="lines+markers",
@@ -1747,42 +2319,63 @@ with tab4:
             fig_ib,
             use_container_width=True,
             config={
-                "displayModeBar": False
+                "displayModeBar":
+                False
             }
         )
 
 
-        # =================================================
-        # InBody 表格
-        # =================================================
-
-        show_ib = ib_df.copy()
-
-        show_ib["日期"] = show_ib[
-            "date"
-        ].apply(
-            simple_date
+        show_ib = (
+            ib_df.copy()
         )
 
-        show_ib["體重"] = pd.to_numeric(
-            show_ib["weight"],
-            errors="coerce"
-        ).round(1)
+        show_ib["日期"] = (
+            show_ib["date"]
+            .apply(
+                simple_date
+            )
+        )
 
-        show_ib["體脂率"] = pd.to_numeric(
-            show_ib["body_fat"],
-            errors="coerce"
-        ).round(1)
+        show_ib["體重"] = (
+            pd.to_numeric(
+                show_ib[
+                    "weight"
+                ],
+                errors="coerce"
+            )
+            .round(1)
+        )
 
-        show_ib["骨骼肌"] = pd.to_numeric(
-            show_ib["muscle"],
-            errors="coerce"
-        ).round(1)
+        show_ib["體脂率"] = (
+            pd.to_numeric(
+                show_ib[
+                    "body_fat"
+                ],
+                errors="coerce"
+            )
+            .round(1)
+        )
 
-        show_ib["BMR"] = pd.to_numeric(
-            show_ib["bmr"],
-            errors="coerce"
-        ).fillna(0).astype(int)
+        show_ib["骨骼肌"] = (
+            pd.to_numeric(
+                show_ib[
+                    "muscle"
+                ],
+                errors="coerce"
+            )
+            .round(1)
+        )
+
+        show_ib["BMR"] = (
+            pd.to_numeric(
+                show_ib[
+                    "bmr"
+                ],
+                errors="coerce"
+            )
+            .fillna(0)
+            .astype(int)
+        )
 
         st.dataframe(
             show_ib[
@@ -1799,38 +2392,39 @@ with tab4:
         )
 
 
-        # =================================================
-        # InBody CSV
-        # =================================================
-
-        ib_csv = show_ib[
-            [
-                "日期",
-                "體重",
-                "體脂率",
-                "骨骼肌",
-                "BMR"
+        ib_csv = (
+            show_ib[
+                [
+                    "日期",
+                    "體重",
+                    "體脂率",
+                    "骨骼肌",
+                    "BMR"
+                ]
             ]
-        ].to_csv(
-            index=False
-        ).encode(
-            "utf-8-sig"
+            .to_csv(
+                index=False
+            )
+            .encode(
+                "utf-8-sig"
+            )
         )
 
         st.download_button(
             "⬇️ 下載 InBody CSV",
             data=ib_csv,
-            file_name=f"{person}_InBody.csv",
+            file_name=(
+                f"{person}_InBody.csv"
+            ),
             mime="text/csv"
         )
 
 
-        # =================================================
-        # 刪除 InBody
-        # =================================================
-
         st.markdown("---")
-        st.write("### 刪除 InBody 紀錄")
+
+        st.write(
+            "### 刪除 InBody 紀錄"
+        )
 
         delete_ib_dates = (
             ib_df
@@ -1840,33 +2434,52 @@ with tab4:
             )
         )
 
-        delete_ib_date = st.selectbox(
-            "選擇日期",
-            options=delete_ib_dates["date"].tolist(),
-            format_func=simple_date,
-            key="delete_ib_date"
+        delete_ib_date = (
+            st.selectbox(
+                "選擇日期",
+                options=(
+                    delete_ib_dates[
+                        "date"
+                    ]
+                    .tolist()
+                ),
+                format_func=simple_date,
+                key="delete_ib_date"
+            )
         )
 
-        selected_ib_delete = delete_ib_dates[
-            delete_ib_dates["date"]
-            == delete_ib_date
-        ].iloc[0]
+        selected_ib_delete = (
+            delete_ib_dates[
+                delete_ib_dates[
+                    "date"
+                ]
+                == delete_ib_date
+            ]
+            .iloc[0]
+        )
 
         if st.button(
             "🗑️ 刪除這筆 InBody"
         ):
 
-            success = delete_inbody_record(
-                selected_ib_delete["id"]
+            success = (
+                delete_inbody_record(
+                    selected_ib_delete[
+                        "id"
+                    ]
+                )
             )
 
             if success:
+
                 st.success(
                     "InBody 紀錄已刪除"
                 )
+
                 st.rerun()
 
     else:
+
         st.info(
             "尚無 InBody 歷史紀錄"
         )
