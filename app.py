@@ -21,7 +21,6 @@ init_db()
 
 st.set_page_config(page_title="Shing & Gloria 健康追蹤器", page_icon="⚖️", layout="centered")
 
-# CSS 優化：字體與排版
 st.markdown("""
     <style>
     html, body, [class*="st-"] { font-size: 18px !important; }
@@ -45,7 +44,6 @@ with tab1:
     st.markdown("---")
     st.write("🍔 飲食紀錄（AI 辨識或手動輸入）")
     
-    # AI 拍照辨識
     uploaded_file = st.file_uploader("拍照辨識飲食", type=["jpg", "png"])
     if uploaded_file and st.button("✨ 開始 AI 辨識"):
         with st.spinner("AI 辨識中..."):
@@ -68,7 +66,6 @@ with tab1:
                 st.success("AI 辨識成功！")
             except Exception as e: st.error(f"錯誤: {e}")
 
-    # 手動新增飲食
     with st.expander("➕ 手動新增食物項目"):
         m_name = st.text_input("食物名稱")
         m_cal = st.number_input("熱量 (kcal)", value=0, step=10)
@@ -82,7 +79,6 @@ with tab1:
             })
             st.success("已加入清單！")
 
-    # 顯示目前已加入的食物
     if st.session_state.current_foods:
         st.write("目前記錄的食物：")
         for i, f in enumerate(st.session_state.current_foods):
@@ -126,7 +122,7 @@ with tab2:
         
         st.write("熱量攝取變化 (kcal)：")
         chart_cal = px.line(df, x='date', y='total_calories', markers=True)
-        chart_cal.update_yaxes(tickformat="d") # 確保整數格式
+        chart_cal.update_yaxes(tickformat="d")
         st.plotly_chart(chart_cal, use_container_width=True)
         
         st.markdown("---")
@@ -139,7 +135,7 @@ with tab2:
         fig_pie = px.pie(macro_data, names='營養素', values='克數 (g)', hole=0.4)
         st.plotly_chart(fig_pie, use_container_width=True)
     else:
-        st.info("尚無歷史數據，請先至「紀錄」分頁新增資料。")
+        st.info("尚無歷史數據，請先至「紀錄」分頁新增並儲存資料。")
 
 with tab3:
     st.write(f"InBody 紀錄 - {user}")
@@ -165,3 +161,5 @@ with tab3:
         ib_chart = px.line(ib_df, x='date', y='weight', markers=True)
         ib_chart.update_yaxes(range=[45, 90])
         st.plotly_chart(ib_chart, use_container_width=True)
+    else:
+        st.info("尚無 InBody 歷史數據。")
