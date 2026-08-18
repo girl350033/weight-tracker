@@ -385,8 +385,10 @@ if "loaded_food_key" not in st.session_state:
 st.title("健康與體態追蹤系統")
 
 person = st.radio(
+    "選擇使用者",
     ["Shing", "Gloria"],
-    horizontal=True
+    horizontal=True,
+    label_visibility="collapsed"
 )
 
 
