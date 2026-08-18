@@ -8,13 +8,18 @@ st.set_page_config(page_title="個人健康與體態追蹤器", page_icon="⚖�
 st.title("⚖️ 個人健康與體態追蹤系統")
 
 # 使用者切換
-user = st.radio("選擇使用者", ["使用者一", "使用者二"], horizontal=True)
+user = st.radio("選擇使用者", ["Shing", "Gloria"], horizontal=True)
 
-# 初始化 Session State 模擬資料儲存
+# 初始化 Session State 模擬資料儲存（加入完整防呆）
 if "logs" not in st.session_state:
-    st.session_state.logs = {"使用者一": [], "使用者二": []}
+    st.session_state.logs = {}
+if user not in st.session_state.logs:
+    st.session_state.logs[user] = []
+
 if "inbody" not in st.session_state:
-    st.session_state.inbody = {"使用者一": [], "使用者二": []}
+    st.session_state.inbody = {}
+if user not in st.session_state.inbody:
+    st.session_state.inbody[user] = []
 
 # 分頁籤
 tab1, tab2, tab3 = st.tabs(["📝 每日紀錄", "📈 趨勢圖表", "📊 InBody 紀錄"])
@@ -64,7 +69,6 @@ with tab1:
                         
                         result_text = response.choices[0].message.content.strip()
                         
-                        # 容錯處理：自動清除可能夾帶的 markdown 標籤
                         if "```json" in result_text:
                             result_text = result_text.split("```json")[1].split("```")[0].strip()
                         elif "```" in result_text:
@@ -147,12 +151,14 @@ with tab3:
             "visceral_fat": ib_visceral,
             "bmr": ib_bmr
         }
+        if user not in st.session_state.inbody:
+            st.session_state.inbody[user] = []
         st.session_state.inbody[user].append(inbody_item)
         st.success("InBody 數據已成功儲存！")
 
     st.markdown("---")
     st.subheader("📋 InBody 歷史紀錄列表")
-    user_inbody_list = st.session_state.inbody[user]
+    user_inbody_list = st.session_state.inbody.get(user, [])
     if not user_inbody_list:
         st.info("尚無 InBody 紀錄。")
     else:
