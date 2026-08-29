@@ -833,7 +833,7 @@ st.title(
 )
 
 if st.button(
-    "👀 開啟教練預覽",
+    "開啟教練預覽",
     use_container_width=False
 ):
     st.switch_page(
