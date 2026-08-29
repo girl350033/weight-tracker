@@ -360,80 +360,32 @@ inbody_df = get_inbody_logs()
 # 1. 目前飲食目標
 # =========================================================
 
-st.subheader("🎯 目前飲食目標")
-
 
 if not target_df.empty:
 
     target_temp = target_df.copy()
 
-    target_temp[
-        "effective_date"
-    ] = pd.to_datetime(
-        target_temp[
-            "effective_date"
-        ]
+    target_temp["effective_date"] = pd.to_datetime(
+        target_temp["effective_date"]
     )
 
     current_target = (
         target_temp
-        .sort_values(
-            "effective_date"
-        )
+        .sort_values("effective_date")
         .iloc[-1]
     )
 
-
-    target_date = simple_date(
-        current_target[
-            "effective_date"
-        ]
+    st.info(
+        f"🎯 **目前飲食目標**　"
+        f"{safe_int(current_target['calories'])} kcal　｜　"
+        f"碳水 {safe_float(current_target['carbs']):.0f} g　｜　"
+        f"蛋白質 {safe_float(current_target['protein']):.0f} g　｜　"
+        f"脂肪 {safe_float(current_target['fat']):.0f} g"
     )
-
-
-    st.caption(
-        f"生效日期：{target_date}"
-    )
-
-
-    c1, c2, c3, c4 = st.columns(4)
-
-
-    with c1:
-
-        st.metric(
-            "每日熱量",
-            f"{safe_int(current_target['calories'])} kcal"
-        )
-
-
-    with c2:
-
-        st.metric(
-            "碳水",
-            f"{safe_float(current_target['carbs']):.0f} g"
-        )
-
-
-    with c3:
-
-        st.metric(
-            "蛋白質",
-            f"{safe_float(current_target['protein']):.0f} g"
-        )
-
-
-    with c4:
-
-        st.metric(
-            "脂肪",
-            f"{safe_float(current_target['fat']):.0f} g"
-        )
-
 
 else:
 
-    st.info("目前尚未設定飲食目標")
+    st.info("🎯 目前尚未設定飲食目標")
 
 
 # =========================================================
