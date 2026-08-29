@@ -10,7 +10,7 @@ from supabase import create_client
 # =========================================================
 
 st.set_page_config(
-    page_title="Shing 教練追蹤",
+    page_title="教練追蹤使用",
     page_icon="📊",
     layout="wide"
 )
@@ -685,7 +685,7 @@ if not weight_df.empty:
 
 
 # =========================================================
-# 教練表格
+# 表格
 # =========================================================
 
 st.markdown("---")
