@@ -129,7 +129,9 @@ def safe_float(value, default=0):
     try:
         if value is None:
             return default
+
         return float(value)
+
     except:
         return default
 
@@ -138,15 +140,25 @@ def safe_int(value, default=0):
     try:
         if value is None:
             return default
-        return int(round(float(value)))
+
+        return int(
+            round(
+                float(value)
+            )
+        )
+
     except:
         return default
 
 
 def simple_date(value):
     try:
-        d = pd.to_datetime(value)
+        d = pd.to_datetime(
+            value
+        )
+
         return f"{d.month}/{d.day}"
+
     except:
         return str(value)
 
@@ -157,13 +169,42 @@ def clean_ai_json(text):
 
     text = (
         text
-        .replace("```json", "")
-        .replace("```", "")
+        .replace(
+            "```json",
+            ""
+        )
+        .replace(
+            "```",
+            ""
+        )
         .strip()
     )
 
-    return json.loads(text)
+    return json.loads(
+        text
+    )
 
+
+def parse_saved_time(
+    saved_value,
+    fallback=time(9, 0)
+):
+    if not saved_value:
+        return fallback
+
+    try:
+        return datetime.strptime(
+            str(saved_value),
+            "%H:%M"
+        ).time()
+
+    except:
+        return fallback
+
+
+# =========================================================
+# 運動消耗計算
+# =========================================================
 
 def calculate_exercise_calories(
     weight_kg,
@@ -181,22 +222,6 @@ def calculate_exercise_calories(
     return round(calories)
 
 
-def parse_saved_time(
-    saved_value,
-    fallback=time(9, 0)
-):
-    if not saved_value:
-        return fallback
-
-    try:
-        return datetime.strptime(
-            str(saved_value),
-            "%H:%M"
-        ).time()
-    except:
-        return fallback
-
-
 # =========================================================
 # 飲食執行率
 # =========================================================
@@ -205,8 +230,13 @@ def target_score(
     actual,
     target
 ):
-    actual = safe_float(actual)
-    target = safe_float(target)
+    actual = safe_float(
+        actual
+    )
+
+    target = safe_float(
+        target
+    )
 
     if target <= 0:
         return 100
@@ -215,7 +245,9 @@ def target_score(
         100
         -
         (
-            abs(actual - target)
+            abs(
+                actual - target
+            )
             / target
             * 100
         )
@@ -266,17 +298,24 @@ def calculate_diet_adherence(
 
 
 # =========================================================
-# 每日紀錄
+# 每日紀錄 Supabase
 # =========================================================
 
 def get_daily_logs(person):
     try:
         response = (
             supabase
-            .table("daily_logs")
+            .table(
+                "daily_logs"
+            )
             .select("*")
-            .eq("person", person)
-            .order("date")
+            .eq(
+                "person",
+                person
+            )
+            .order(
+                "date"
+            )
             .execute()
         )
 
@@ -288,6 +327,7 @@ def get_daily_logs(person):
         st.error(
             f"讀取每日紀錄失敗：{e}"
         )
+
         return pd.DataFrame()
 
 
@@ -298,9 +338,14 @@ def get_daily_record(
     try:
         response = (
             supabase
-            .table("daily_logs")
+            .table(
+                "daily_logs"
+            )
             .select("*")
-            .eq("person", person)
+            .eq(
+                "person",
+                person
+            )
             .eq(
                 "date",
                 str(selected_date)
@@ -317,6 +362,7 @@ def get_daily_record(
         st.error(
             f"讀取紀錄失敗：{e}"
         )
+
         return None
 
 
@@ -339,7 +385,7 @@ def save_daily_record(
         for f in foods
     )
 
-    total_pro = sum(
+    total_protein = sum(
         safe_float(
             f.get(
                 "protein",
@@ -359,7 +405,7 @@ def save_daily_record(
         for f in foods
     )
 
-    total_carb = sum(
+    total_carbs = sum(
         safe_float(
             f.get(
                 "carbs",
@@ -370,28 +416,54 @@ def save_daily_record(
     )
 
     payload = {
-        "person": person,
-        "date": str(record_date),
-        "weight": round(
+        "person":
+        person,
+
+        "date":
+        str(record_date),
+
+        "weight":
+        round(
             float(weight),
             2
         ),
+
         "measure_time":
         measure_time or "",
+
         "ex_name":
         ex_name or "",
+
         "ex_cal":
-        safe_int(ex_cal),
+        safe_int(
+            ex_cal
+        ),
+
         "items_json":
         foods,
+
         "total_calories":
-        safe_int(total_cal),
+        safe_int(
+            total_cal
+        ),
+
         "total_protein":
-        round(total_pro, 1),
+        round(
+            total_protein,
+            1
+        ),
+
         "total_fat":
-        round(total_fat, 1),
+        round(
+            total_fat,
+            1
+        ),
+
         "total_carbs":
-        round(total_carb, 1)
+        round(
+            total_carbs,
+            1
+        )
     }
 
     existing = get_daily_record(
@@ -403,19 +475,28 @@ def save_daily_record(
         if existing:
             (
                 supabase
-                .table("daily_logs")
-                .update(payload)
+                .table(
+                    "daily_logs"
+                )
+                .update(
+                    payload
+                )
                 .eq(
                     "id",
                     existing["id"]
                 )
                 .execute()
             )
+
         else:
             (
                 supabase
-                .table("daily_logs")
-                .insert(payload)
+                .table(
+                    "daily_logs"
+                )
+                .insert(
+                    payload
+                )
                 .execute()
             )
 
@@ -425,6 +506,7 @@ def save_daily_record(
         st.error(
             f"儲存失敗：{e}"
         )
+
         return False
 
 
@@ -434,7 +516,9 @@ def delete_daily_record(
     try:
         (
             supabase
-            .table("daily_logs")
+            .table(
+                "daily_logs"
+            )
             .delete()
             .eq(
                 "id",
@@ -449,11 +533,12 @@ def delete_daily_record(
         st.error(
             f"刪除失敗：{e}"
         )
+
         return False
 
 
 # =========================================================
-# 飲食目標
+# 飲食目標 Supabase
 # =========================================================
 
 def get_nutrition_targets(
@@ -484,6 +569,7 @@ def get_nutrition_targets(
         st.error(
             f"讀取飲食目標失敗：{e}"
         )
+
         return pd.DataFrame()
 
 
@@ -523,6 +609,7 @@ def get_target_for_date(
         st.error(
             f"讀取飲食目標失敗：{e}"
         )
+
         return None
 
 
@@ -568,16 +655,29 @@ def save_nutrition_target(
     payload = {
         "person":
         person,
+
         "effective_date":
         str(effective_date),
+
         "calories":
-        safe_float(calories),
+        safe_float(
+            calories
+        ),
+
         "carbs":
-        safe_float(carbs),
+        safe_float(
+            carbs
+        ),
+
         "protein":
-        safe_float(protein),
+        safe_float(
+            protein
+        ),
+
         "fat":
-        safe_float(fat)
+        safe_float(
+            fat
+        )
     }
 
     existing = get_exact_target(
@@ -592,20 +692,25 @@ def save_nutrition_target(
                 .table(
                     "nutrition_targets"
                 )
-                .update(payload)
+                .update(
+                    payload
+                )
                 .eq(
                     "id",
                     existing["id"]
                 )
                 .execute()
             )
+
         else:
             (
                 supabase
                 .table(
                     "nutrition_targets"
                 )
-                .insert(payload)
+                .insert(
+                    payload
+                )
                 .execute()
             )
 
@@ -615,6 +720,7 @@ def save_nutrition_target(
         st.error(
             f"飲食目標儲存失敗：{e}"
         )
+
         return False
 
 
@@ -641,11 +747,12 @@ def delete_nutrition_target(
         st.error(
             f"刪除飲食目標失敗：{e}"
         )
+
         return False
 
 
 # =========================================================
-# InBody
+# InBody Supabase
 # =========================================================
 
 def get_inbody_logs(
@@ -662,7 +769,9 @@ def get_inbody_logs(
                 "person",
                 person
             )
-            .order("date")
+            .order(
+                "date"
+            )
             .execute()
         )
 
@@ -674,6 +783,7 @@ def get_inbody_logs(
         st.error(
             f"讀取 InBody 失敗：{e}"
         )
+
         return pd.DataFrame()
 
 
@@ -708,6 +818,7 @@ def get_inbody_record(
         st.error(
             f"讀取 InBody 紀錄失敗：{e}"
         )
+
         return None
 
 
@@ -722,25 +833,32 @@ def save_inbody_record(
     payload = {
         "person":
         person,
+
         "date":
         str(record_date),
+
         "weight":
         round(
             float(weight),
             2
         ),
+
         "body_fat":
         round(
             float(body_fat),
             2
         ),
+
         "muscle":
         round(
             float(muscle),
             2
         ),
+
         "bmr":
-        safe_int(bmr)
+        safe_int(
+            bmr
+        )
     }
 
     existing = get_inbody_record(
@@ -755,20 +873,25 @@ def save_inbody_record(
                 .table(
                     "inbody_logs"
                 )
-                .update(payload)
+                .update(
+                    payload
+                )
                 .eq(
                     "id",
                     existing["id"]
                 )
                 .execute()
             )
+
         else:
             (
                 supabase
                 .table(
                     "inbody_logs"
                 )
-                .insert(payload)
+                .insert(
+                    payload
+                )
                 .execute()
             )
 
@@ -778,6 +901,7 @@ def save_inbody_record(
         st.error(
             f"InBody 儲存失敗：{e}"
         )
+
         return False
 
 
@@ -804,6 +928,7 @@ def delete_inbody_record(
         st.error(
             f"InBody 刪除失敗：{e}"
         )
+
         return False
 
 
@@ -825,20 +950,12 @@ if "ai_exercise_result" not in st.session_state:
 
 
 # =========================================================
-# 標題＋教練預覽
+# 標題
 # =========================================================
 
 st.title(
     "健康與體態追蹤系統"
 )
-
-if st.button(
-    "開啟教練預覽",
-    use_container_width=False
-):
-    st.switch_page(
-        "pages/coach.py"
-    )
 
 
 person = st.radio(
@@ -873,16 +990,27 @@ with tab1:
         f"每日紀錄｜{person}"
     )
 
+
+    # =====================================================
+    # 日期
+    # =====================================================
+
     record_date = st.date_input(
         "日期",
         value=date.today(),
         format="YYYY/MM/DD",
-        key=f"record_date_{person}"
+        key=(
+            f"record_date_"
+            f"{person}"
+        )
     )
 
+
     session_key = (
-        f"{person}_{record_date}"
+        f"{person}_"
+        f"{record_date}"
     )
+
 
     old_record = get_daily_record(
         person,
@@ -891,7 +1019,7 @@ with tab1:
 
 
     # =====================================================
-    # 切換日期時載入食物
+    # 載入當日食物
     # =====================================================
 
     if (
@@ -910,11 +1038,11 @@ with tab1:
                 old_items,
                 str
             ):
-
                 try:
                     old_items = json.loads(
                         old_items
                     )
+
                 except:
                     old_items = []
 
@@ -923,7 +1051,6 @@ with tab1:
             )
 
         else:
-
             st.session_state.current_foods = []
 
         st.session_state.loaded_food_key = (
@@ -932,7 +1059,7 @@ with tab1:
 
 
     # =====================================================
-    # 運動欄位 Key
+    # 運動欄位 Session State
     # =====================================================
 
     exercise_name_key = (
@@ -947,6 +1074,7 @@ with tab1:
         f"{record_date}"
     )
 
+
     old_ex_name = (
         old_record.get(
             "ex_name",
@@ -955,6 +1083,7 @@ with tab1:
         if old_record
         else ""
     )
+
 
     old_ex_cal = (
         safe_int(
@@ -967,13 +1096,18 @@ with tab1:
         else 0
     )
 
+
     if (
         exercise_name_key
         not in st.session_state
     ):
         st.session_state[
             exercise_name_key
-        ] = old_ex_name or ""
+        ] = (
+            old_ex_name
+            or ""
+        )
+
 
     if (
         exercise_cal_key
@@ -991,13 +1125,14 @@ with tab1:
     default_weight = (
         safe_float(
             old_record.get(
-                "weight"
-            ),
-            60
+                "weight",
+                60
+            )
         )
         if old_record
         else 60.0
     )
+
 
     weight = st.number_input(
         "體重 (kg)",
@@ -1008,18 +1143,23 @@ with tab1:
         ),
         step=0.1,
         format="%.1f",
-        key=f"daily_weight_{session_key}"
+        key=(
+            f"daily_weight_"
+            f"{session_key}"
+        )
     )
 
 
     # =====================================================
-    # 測量時間 → 時間選擇器
+    # 幾點測量
+    # 時間選擇器
     # =====================================================
 
     default_measure_time = time(
         9,
         0
     )
+
 
     if old_record:
 
@@ -1034,9 +1174,13 @@ with tab1:
         default_measure_time = (
             parse_saved_time(
                 saved_measure_time,
-                time(9, 0)
+                time(
+                    9,
+                    0
+                )
             )
         )
+
 
     selected_measure_time = (
         st.time_input(
@@ -1050,8 +1194,10 @@ with tab1:
         )
     )
 
+
     measure_time = (
-        selected_measure_time.strftime(
+        selected_measure_time
+        .strftime(
             "%H:%M"
         )
     )
@@ -1067,6 +1213,7 @@ with tab1:
             record_date
         )
     )
+
 
     if current_target:
 
@@ -1097,12 +1244,13 @@ with tab1:
 
 
     # =====================================================
-    # AI文字輸入
+    # AI 文字食物
     # =====================================================
 
     st.write(
         "### ✍️ 文字快速輸入"
     )
+
 
     food_text = st.text_area(
         "輸入食物與份量",
@@ -1118,6 +1266,7 @@ with tab1:
             f"{session_key}"
         )
     )
+
 
     if st.button(
         "✨ AI 分析文字食物",
@@ -1162,11 +1311,12 @@ with tab1:
                                     {
                                         "role":
                                         "system",
+
                                         "content":
                                         """
 你是一個飲食營養分析助手。
 
-根據使用者提供的食物名稱與份量，
+請根據使用者提供的食物名稱與份量，
 估算每一項食物：
 
 食物名稱
@@ -1200,16 +1350,20 @@ with tab1:
 }
 """
                                     },
+
                                     {
                                         "role":
                                         "user",
+
                                         "content":
                                         food_text
                                     }
                                 ],
+
                                 max_tokens=700
                             )
                         )
+
 
                         res = (
                             response
@@ -1218,14 +1372,17 @@ with tab1:
                             .content
                         )
 
+
                         parsed = clean_ai_json(
                             res
                         )
+
 
                         new_items = parsed.get(
                             "items",
                             []
                         )
+
 
                         if new_items:
 
@@ -1253,7 +1410,7 @@ with tab1:
 
 
     # =====================================================
-    # AI照片辨識
+    # AI 照片食物
     # =====================================================
 
     st.markdown("---")
@@ -1261,6 +1418,7 @@ with tab1:
     st.write(
         "### 📷 拍照辨識"
     )
+
 
     uploaded_file = st.file_uploader(
         "拍照或選擇餐點照片",
@@ -1274,6 +1432,7 @@ with tab1:
             f"{session_key}"
         )
     )
+
 
     if (
         uploaded_file
@@ -1308,6 +1467,7 @@ with tab1:
                         .getvalue()
                     )
 
+
                     base64_image = (
                         base64
                         .b64encode(
@@ -1318,21 +1478,25 @@ with tab1:
                         )
                     )
 
+
                     response = (
                         client
                         .chat
                         .completions
                         .create(
                             model="gpt-4o",
+
                             messages=[
                                 {
                                     "role":
                                     "user",
+
                                     "content":
                                     [
                                         {
                                             "type":
                                             "text",
+
                                             "text":
                                             """
 請辨識照片中的食物。
@@ -1365,9 +1529,11 @@ with tab1:
 }
 """
                                         },
+
                                         {
                                             "type":
                                             "image_url",
+
                                             "image_url":
                                             {
                                                 "url":
@@ -1377,9 +1543,11 @@ with tab1:
                                     ]
                                 }
                             ],
+
                             max_tokens=700
                         )
                     )
+
 
                     res = (
                         response
@@ -1388,14 +1556,17 @@ with tab1:
                         .content
                     )
 
+
                     parsed = clean_ai_json(
                         res
                     )
+
 
                     new_items = parsed.get(
                         "items",
                         []
                     )
+
 
                     if new_items:
 
@@ -1438,6 +1609,7 @@ with tab1:
             )
         )
 
+
         m_portion = st.text_input(
             "份量",
             placeholder="例如：100g、1碗、2顆",
@@ -1446,6 +1618,7 @@ with tab1:
                 f"{session_key}"
             )
         )
+
 
         m_cal = st.number_input(
             "熱量 kcal",
@@ -1458,6 +1631,7 @@ with tab1:
             )
         )
 
+
         m_pro = st.number_input(
             "蛋白質 g",
             min_value=0.0,
@@ -1468,6 +1642,7 @@ with tab1:
                 f"{session_key}"
             )
         )
+
 
         m_fat = st.number_input(
             "脂肪 g",
@@ -1480,6 +1655,7 @@ with tab1:
             )
         )
 
+
         m_carb = st.number_input(
             "碳水化合物 g",
             min_value=0.0,
@@ -1490,6 +1666,7 @@ with tab1:
                 f"{session_key}"
             )
         )
+
 
         if st.button(
             "加入食物",
@@ -1505,16 +1682,29 @@ with tab1:
                     m_name
                     if m_name
                     else "自訂食物",
+
                     "portion":
                     m_portion,
+
                     "calories":
-                    safe_int(m_cal),
+                    safe_int(
+                        m_cal
+                    ),
+
                     "protein":
-                    safe_float(m_pro),
+                    safe_float(
+                        m_pro
+                    ),
+
                     "fat":
-                    safe_float(m_fat),
+                    safe_float(
+                        m_fat
+                    ),
+
                     "carbs":
-                    safe_float(m_carb)
+                    safe_float(
+                        m_carb
+                    )
                 }
             )
 
@@ -1522,7 +1712,7 @@ with tab1:
 
 
     # =====================================================
-    # 當日食物
+    # 當日食物表
     # =====================================================
 
     if st.session_state.current_foods:
@@ -1533,9 +1723,11 @@ with tab1:
             "### 當日食物"
         )
 
+
         food_df = pd.DataFrame(
             st.session_state.current_foods
         )
+
 
         required_cols = [
             "name",
@@ -1545,6 +1737,7 @@ with tab1:
             "fat",
             "carbs"
         ]
+
 
         for col in required_cols:
 
@@ -1561,52 +1754,63 @@ with tab1:
 
                     food_df[col] = 0
 
+
         food_df = food_df[
             required_cols
         ]
+
 
         edited_food_df = st.data_editor(
             food_df,
             hide_index=True,
             num_rows="dynamic",
             use_container_width=True,
+
             column_config={
                 "name":
                 st.column_config.TextColumn(
                     "食物"
                 ),
+
                 "portion":
                 st.column_config.TextColumn(
                     "份量"
                 ),
+
                 "calories":
                 st.column_config.NumberColumn(
                     "熱量",
                     format="%d kcal"
                 ),
+
                 "protein":
                 st.column_config.NumberColumn(
                     "蛋白質",
                     format="%.1f g"
                 ),
+
                 "fat":
                 st.column_config.NumberColumn(
                     "脂肪",
                     format="%.1f g"
                 ),
+
                 "carbs":
                 st.column_config.NumberColumn(
                     "碳水",
                     format="%.1f g"
                 )
             },
+
             key=(
                 f"food_editor_"
                 f"{session_key}"
             )
         )
 
+
         cleaned_foods = []
+
 
         for item in (
             edited_food_df
@@ -1624,6 +1828,7 @@ with tab1:
                             ""
                         )
                     ),
+
                     "portion":
                     str(
                         item.get(
@@ -1631,6 +1836,7 @@ with tab1:
                             ""
                         )
                     ),
+
                     "calories":
                     safe_int(
                         item.get(
@@ -1638,6 +1844,7 @@ with tab1:
                             0
                         )
                     ),
+
                     "protein":
                     safe_float(
                         item.get(
@@ -1645,6 +1852,7 @@ with tab1:
                             0
                         )
                     ),
+
                     "fat":
                     safe_float(
                         item.get(
@@ -1652,6 +1860,7 @@ with tab1:
                             0
                         )
                     ),
+
                     "carbs":
                     safe_float(
                         item.get(
@@ -1662,24 +1871,29 @@ with tab1:
                 }
             )
 
+
         st.session_state.current_foods = (
             cleaned_foods
         )
+
 
         total_cal = sum(
             x["calories"]
             for x in cleaned_foods
         )
 
+
         total_pro = sum(
             x["protein"]
             for x in cleaned_foods
         )
 
+
         total_fat = sum(
             x["fat"]
             for x in cleaned_foods
         )
+
 
         total_carb = sum(
             x["carbs"]
@@ -1695,9 +1909,11 @@ with tab1:
             "### 今日營養"
         )
 
+
         c1, c2 = st.columns(
             2
         )
+
 
         with c1:
 
@@ -1710,6 +1926,7 @@ with tab1:
                 "蛋白質",
                 f"{total_pro:.1f} g"
             )
+
 
         with c2:
 
@@ -1751,12 +1968,15 @@ with tab1:
                 )
             )
 
+
             st.markdown("---")
+
 
             st.metric(
                 "🎯 今日飲食執行率",
                 f"{adherence}%"
             )
+
 
             st.write(
                 f"熱量："
@@ -1764,17 +1984,20 @@ with tab1:
                 f"{safe_float(current_target['calories']):.0f} kcal"
             )
 
+
             st.write(
                 f"碳水："
                 f"{total_carb:.1f} / "
                 f"{safe_float(current_target['carbs']):.0f} g"
             )
 
+
             st.write(
                 f"蛋白質："
                 f"{total_pro:.1f} / "
                 f"{safe_float(current_target['protein']):.0f} g"
             )
+
 
             st.write(
                 f"脂肪："
@@ -1784,7 +2007,7 @@ with tab1:
 
 
         # =================================================
-        # 三大營養素熱量占比
+        # 三大營養素熱量比例
         # =================================================
 
         protein_kcal = (
@@ -1802,17 +2025,20 @@ with tab1:
             * 4
         )
 
+
         macro_total = (
             protein_kcal
             + fat_kcal
             + carb_kcal
         )
 
+
         if macro_total > 0:
 
             st.write(
                 "### 三大營養素熱量占比"
             )
+
 
             macro_df = pd.DataFrame(
                 {
@@ -1822,6 +2048,7 @@ with tab1:
                         "脂肪",
                         "碳水"
                     ],
+
                     "熱量":
                     [
                         protein_kcal,
@@ -1831,6 +2058,7 @@ with tab1:
                 }
             )
 
+
             fig_macro = px.pie(
                 macro_df,
                 names="營養素",
@@ -1838,32 +2066,39 @@ with tab1:
                 hole=0.45
             )
 
+
             fig_macro.update_traces(
                 textposition="inside",
                 textinfo="percent+label"
             )
 
+
             fig_macro.update_layout(
                 height=350,
+
                 margin=dict(
                     l=10,
                     r=10,
                     t=10,
                     b=10
                 ),
+
                 legend=dict(
                     orientation="h",
                     y=-0.08
                 )
             )
 
+
             st.plotly_chart(
                 fig_macro,
                 use_container_width=True,
+
                 config={
                     "displayModeBar":
                     False
                 },
+
                 key=(
                     f"daily_macro_chart_"
                     f"{person}_"
@@ -1883,6 +2118,7 @@ with tab1:
             st.session_state.current_foods = []
 
             st.rerun()
+
 
     else:
 
@@ -1906,6 +2142,7 @@ with tab1:
         "🏃 運動紀錄"
     )
 
+
     st.caption(
         f"目前使用體重："
         f"{weight:.1f} kg"
@@ -1927,6 +2164,10 @@ with tab1:
     )
 
 
+    # =====================================================
+    # AI分析運動
+    # =====================================================
+
     if st.button(
         "✨ AI 分析並自動填入",
         use_container_width=True,
@@ -1943,6 +2184,10 @@ with tab1:
             )
 
 
+        # =================================================
+        # 休息日
+        # =================================================
+
         elif exercise_text.strip().lower() in [
             "休息日",
             "休息",
@@ -1954,33 +2199,46 @@ with tab1:
                 exercise_name_key
             ] = "休息日"
 
+
             st.session_state[
                 exercise_cal_key
             ] = 0
 
+
             st.session_state.ai_exercise_result = {
                 "name":
                 "休息日",
+
                 "minutes":
                 0,
+
                 "met":
                 0,
+
                 "intensity":
                 "休息",
+
                 "calories":
                 0
             }
+
 
             st.session_state.ai_exercise_result_key = (
                 session_key
             )
 
+
             st.rerun()
 
+
+        # =================================================
+        # 一般運動
+        # =================================================
 
         else:
 
             client = get_openai_client()
+
 
             if client is None:
 
@@ -2002,49 +2260,64 @@ with tab1:
                             .completions
                             .create(
                                 model="gpt-4o",
+
                                 messages=[
                                     {
                                         "role":
                                         "system",
+
                                         "content":
                                         """
 你是一個運動紀錄分析助手。
 
-請從使用者輸入判斷：
+請根據使用者輸入判斷：
 
 1. 運動名稱
 2. 運動時間，單位分鐘
 3. 運動強度
-4. 合理 MET 值
+4. 合理的 MET 值
 
 如果使用者有明確描述強度，
 依照描述判斷。
 
-如果沒有明確強度，
-使用一般合理強度估算。
+如果沒有明確描述，
+使用一般合理強度。
 
-只回傳 JSON：
+如果使用者輸入重量訓練，
+請依照一般重量訓練合理估算。
+
+如果使用者輸入跑步、快走、登山、
+飛輪、游泳、有氧等，
+依一般活動強度估算合理 MET。
+
+只回傳 JSON。
+
+格式：
 
 {
-  "exercise_name": "慢跑",
-  "minutes": 20,
+  "exercise_name": "重量訓練",
+  "minutes": 60,
   "intensity": "一般",
-  "met": 7.5
+  "met": 5.0
 }
 
-不要自行計算卡路里。
+不要自己計算卡路里。
 """
                                     },
+
                                     {
                                         "role":
                                         "user",
+
                                         "content":
                                         exercise_text
                                     }
                                 ],
+
                                 max_tokens=300
                             )
                         )
+
 
                         res = (
                             response
@@ -2053,16 +2326,17 @@ with tab1:
                             .content
                         )
 
+
                         parsed = clean_ai_json(
                             res
                         )
 
-                        ex_ai_name = (
-                            parsed.get(
-                                "exercise_name",
-                                exercise_text
-                            )
+
+                        ex_ai_name = parsed.get(
+                            "exercise_name",
+                            exercise_text
                         )
+
 
                         ex_ai_minutes = safe_float(
                             parsed.get(
@@ -2071,6 +2345,7 @@ with tab1:
                             )
                         )
 
+
                         ex_ai_met = safe_float(
                             parsed.get(
                                 "met",
@@ -2078,12 +2353,16 @@ with tab1:
                             )
                         )
 
-                        ex_ai_intensity = (
-                            parsed.get(
-                                "intensity",
-                                ""
-                            )
+
+                        ex_ai_intensity = parsed.get(
+                            "intensity",
+                            ""
                         )
+
+
+                        # =================================
+                        # 用當日體重計算消耗熱量
+                        # =================================
 
                         estimated_cal = (
                             calculate_exercise_calories(
@@ -2092,6 +2371,11 @@ with tab1:
                                 ex_ai_minutes
                             )
                         )
+
+
+                        # =================================
+                        # 運動名稱
+                        # =================================
 
                         if ex_ai_minutes > 0:
 
@@ -2108,33 +2392,46 @@ with tab1:
 
 
                         # =================================
-                        # AI 自動帶入正式欄位
+                        # 自動填入正式欄位
                         # =================================
 
                         st.session_state[
                             exercise_name_key
                         ] = final_name
 
+
                         st.session_state[
                             exercise_cal_key
                         ] = estimated_cal
 
+
+                        # =================================
+                        # 保存 AI 結果
+                        # MET 保存但不顯示
+                        # =================================
+
                         st.session_state.ai_exercise_result = {
                             "name":
                             ex_ai_name,
+
                             "minutes":
                             ex_ai_minutes,
+
                             "met":
                             ex_ai_met,
+
                             "intensity":
                             ex_ai_intensity,
+
                             "calories":
                             estimated_cal
                         }
 
+
                         st.session_state.ai_exercise_result_key = (
                             session_key
                         )
+
 
                         st.rerun()
 
@@ -2147,7 +2444,7 @@ with tab1:
 
 
     # =====================================================
-    # 顯示 AI 運動結果
+    # AI運動結果
     # MET 不顯示
     # =====================================================
 
@@ -2162,15 +2459,18 @@ with tab1:
             st.session_state.ai_exercise_result
         )
 
+
         st.success(
             "✅ AI 已自動填入下方運動紀錄"
         )
+
 
         if ai_ex["minutes"] > 0:
 
             c1, c2 = st.columns(
                 2
             )
+
 
             with c1:
 
@@ -2179,10 +2479,12 @@ with tab1:
                     f"{ai_ex['name']}"
                 )
 
+
                 st.write(
                     f"**時間：** "
                     f"{ai_ex['minutes']:.0f} 分鐘"
                 )
+
 
             with c2:
 
@@ -2191,11 +2493,13 @@ with tab1:
                     f"{ai_ex['intensity']}"
                 )
 
+
         else:
 
             st.write(
                 "**運動：** 休息日"
             )
+
 
         st.metric(
             "🔥 估計運動消耗",
@@ -2205,12 +2509,15 @@ with tab1:
 
     # =====================================================
     # 正式運動欄位
+    # AI 已自動帶入
+    # 仍然可手動調整
     # =====================================================
 
     ex_name = st.text_input(
         "運動內容",
         key=exercise_name_key
     )
+
 
     ex_cal = st.number_input(
         "運動消耗 kcal",
@@ -2221,7 +2528,7 @@ with tab1:
 
 
     # =====================================================
-    # 儲存
+    # 儲存每日紀錄
     # =====================================================
 
     if st.button(
@@ -2247,6 +2554,7 @@ with tab1:
             st.session_state.current_foods
         )
 
+
         if success:
 
             st.success(
@@ -2266,9 +2574,11 @@ with tab2:
         "📈 體重趨勢"
     )
 
+
     df = get_daily_logs(
         person
     )
+
 
     if not df.empty:
 
@@ -2276,22 +2586,27 @@ with tab2:
             df["date"]
         )
 
+
         df["weight"] = pd.to_numeric(
             df["weight"],
             errors="coerce"
         )
 
+
         df = df.sort_values(
             "date"
         )
 
+
         fig_weight = go.Figure()
+
 
         fig_weight.add_trace(
             go.Scatter(
                 x=df["date"],
                 y=df["weight"],
                 mode="lines+markers",
+
                 hovertemplate=(
                     "%{x|%m/%d}"
                     "<br>"
@@ -2301,10 +2616,12 @@ with tab2:
             )
         )
 
+
         valid_weight = (
             df["weight"]
             .dropna()
         )
+
 
         if not valid_weight.empty:
 
@@ -2312,33 +2629,44 @@ with tab2:
                 valid_weight.min()
             )
 
+
             max_weight = (
                 valid_weight.max()
             )
+
 
             lower = max(
                 30,
                 min_weight - 2
             )
 
+
             upper = (
                 max_weight + 2
             )
 
-            if upper - lower < 5:
+
+            if (
+                upper - lower
+                < 5
+            ):
 
                 upper = (
                     lower + 5
                 )
+
 
             fig_weight.update_yaxes(
                 range=[
                     lower,
                     upper
                 ],
+
                 tickformat=".1f",
+
                 title="kg"
             )
+
 
         fig_weight.update_xaxes(
             tickformat="%m/%d",
@@ -2346,24 +2674,30 @@ with tab2:
             title=""
         )
 
+
         fig_weight.update_layout(
             height=320,
+
             margin=dict(
                 l=10,
                 r=10,
                 t=10,
                 b=20
             ),
+
             showlegend=False
         )
+
 
         st.plotly_chart(
             fig_weight,
             use_container_width=True,
+
             config={
                 "displayModeBar":
                 False
             },
+
             key=(
                 f"weight_chart_"
                 f"{person}"
@@ -2381,18 +2715,22 @@ with tab2:
             "🍱 單日營養"
         )
 
+
         date_options = (
             df["date"]
             .dt.date
             .tolist()
         )
 
+
         selected_macro_date = (
             st.selectbox(
                 "選擇日期",
                 options=date_options,
+
                 format_func=lambda x:
                 f"{x.month}/{x.day}",
+
                 key=(
                     f"macro_date_"
                     f"{person}"
@@ -2400,14 +2738,15 @@ with tab2:
             )
         )
 
+
         selected_row = (
             df[
-                df["date"]
-                .dt.date
+                df["date"].dt.date
                 == selected_macro_date
             ]
             .iloc[0]
         )
+
 
         pro = safe_float(
             selected_row.get(
@@ -2416,12 +2755,14 @@ with tab2:
             )
         )
 
+
         fat = safe_float(
             selected_row.get(
                 "total_fat",
                 0
             )
         )
+
 
         carb = safe_float(
             selected_row.get(
@@ -2430,12 +2771,14 @@ with tab2:
             )
         )
 
+
         calories = safe_float(
             selected_row.get(
                 "total_calories",
                 0
             )
         )
+
 
         exercise_cal = safe_float(
             selected_row.get(
@@ -2444,9 +2787,11 @@ with tab2:
             )
         )
 
+
         c1, c2 = st.columns(
             2
         )
+
 
         with c1:
 
@@ -2460,6 +2805,7 @@ with tab2:
                 f"{pro:.1f} g"
             )
 
+
         with c2:
 
             st.metric(
@@ -2472,17 +2818,21 @@ with tab2:
                 f"{carb:.1f} g"
             )
 
+
         protein_kcal = (
             pro * 4
         )
+
 
         fat_kcal = (
             fat * 9
         )
 
+
         carb_kcal = (
             carb * 4
         )
+
 
         if (
             protein_kcal
@@ -2499,6 +2849,7 @@ with tab2:
                         "脂肪",
                         "碳水"
                     ],
+
                     "熱量":
                     [
                         protein_kcal,
@@ -2508,6 +2859,7 @@ with tab2:
                 }
             )
 
+
             fig_trend_macro = px.pie(
                 macro_df,
                 names="營養素",
@@ -2515,13 +2867,16 @@ with tab2:
                 hole=0.45
             )
 
+
             fig_trend_macro.update_traces(
                 textposition="inside",
                 textinfo="percent+label"
             )
 
+
             fig_trend_macro.update_layout(
                 height=330,
+
                 margin=dict(
                     l=10,
                     r=10,
@@ -2530,19 +2885,23 @@ with tab2:
                 )
             )
 
+
             st.plotly_chart(
                 fig_trend_macro,
                 use_container_width=True,
+
                 config={
                     "displayModeBar":
                     False
                 },
+
                 key=(
                     f"trend_macro_chart_"
                     f"{person}_"
                     f"{selected_macro_date}"
                 )
             )
+
 
     else:
 
@@ -2561,9 +2920,11 @@ with tab3:
         "📋 教練追蹤紀錄"
     )
 
+
     history_df = get_daily_logs(
         person
     )
+
 
     if not history_df.empty:
 
@@ -2575,7 +2936,9 @@ with tab3:
             )
         )
 
+
         coach_rows = []
+
 
         for _, row in (
             history_df
@@ -2589,12 +2952,14 @@ with tab3:
                 .date()
             )
 
+
             target = (
                 get_target_for_date(
                     person,
                     row_date
                 )
             )
+
 
             actual_cal = safe_float(
                 row.get(
@@ -2603,12 +2968,14 @@ with tab3:
                 )
             )
 
+
             actual_carb = safe_float(
                 row.get(
                     "total_carbs",
                     0
                 )
             )
+
 
             actual_pro = safe_float(
                 row.get(
@@ -2617,12 +2984,14 @@ with tab3:
                 )
             )
 
+
             actual_fat = safe_float(
                 row.get(
                     "total_fat",
                     0
                 )
             )
+
 
             if target:
 
@@ -2632,20 +3001,25 @@ with tab3:
                         actual_carb,
                         actual_pro,
                         actual_fat,
+
                         target[
                             "calories"
                         ],
+
                         target[
                             "carbs"
                         ],
+
                         target[
                             "protein"
                         ],
+
                         target[
                             "fat"
                         ]
                     )
                 )
+
 
                 adherence_text = (
                     f"{adherence}%"
@@ -2654,6 +3028,7 @@ with tab3:
             else:
 
                 adherence_text = "-"
+
 
             coach_rows.append(
                 {
@@ -2713,9 +3088,11 @@ with tab3:
                 }
             )
 
+
         coach_df = pd.DataFrame(
             coach_rows
         )
+
 
         st.dataframe(
             coach_df,
@@ -2738,13 +3115,18 @@ with tab3:
             )
         )
 
+
         st.download_button(
             "⬇️ 下載教練版紀錄 CSV",
+
             data=csv_data,
+
             file_name=(
                 f"{person}_教練追蹤紀錄.csv"
             ),
+
             mime="text/csv",
+
             key=(
                 f"coach_csv_"
                 f"{person}"
@@ -2758,9 +3140,11 @@ with tab3:
 
         st.markdown("---")
 
+
         st.write(
             "### 編輯過往紀錄"
         )
+
 
         edit_dates = (
             history_df[
@@ -2769,11 +3153,15 @@ with tab3:
             .tolist()
         )
 
+
         selected_edit_date = (
             st.selectbox(
                 "選擇日期",
+
                 options=edit_dates,
+
                 format_func=simple_date,
+
                 key=(
                     f"history_edit_"
                     f"{person}"
@@ -2781,37 +3169,43 @@ with tab3:
             )
         )
 
+
         selected_history = (
             history_df[
-                history_df["date"]
+                history_df[
+                    "date"
+                ]
                 == selected_edit_date
             ]
             .iloc[0]
         )
 
-        edit_weight = (
-            st.number_input(
-                "體重",
-                min_value=30.0,
-                max_value=200.0,
-                value=safe_float(
-                    selected_history.get(
-                        "weight",
-                        60
-                    )
-                ),
-                step=0.1,
-                key=(
-                    f"edit_weight_"
-                    f"{person}_"
-                    f"{selected_edit_date}"
+
+        edit_weight = st.number_input(
+            "體重",
+
+            min_value=30.0,
+            max_value=200.0,
+
+            value=safe_float(
+                selected_history.get(
+                    "weight",
+                    60
                 )
+            ),
+
+            step=0.1,
+
+            key=(
+                f"edit_weight_"
+                f"{person}_"
+                f"{selected_edit_date}"
             )
         )
 
 
         # =================================================
-        # 編輯時間 → 時間選擇器
+        # 編輯測量時間
         # =================================================
 
         saved_edit_time = (
@@ -2822,18 +3216,26 @@ with tab3:
             or ""
         )
 
+
         edit_time_default = (
             parse_saved_time(
                 saved_edit_time,
-                time(9, 0)
+                time(
+                    9,
+                    0
+                )
             )
         )
+
 
         edit_time_value = (
             st.time_input(
                 "幾點測量",
+
                 value=edit_time_default,
+
                 step=1800,
+
                 key=(
                     f"edit_time_"
                     f"{person}_"
@@ -2842,49 +3244,55 @@ with tab3:
             )
         )
 
+
         edit_time = (
-            edit_time_value.strftime(
+            edit_time_value
+            .strftime(
                 "%H:%M"
             )
         )
 
 
-        edit_ex_name = (
-            st.text_input(
-                "運動內容",
-                value=(
-                    selected_history.get(
-                        "ex_name",
-                        ""
-                    )
-                    or ""
-                ),
-                key=(
-                    f"edit_ex_"
-                    f"{person}_"
-                    f"{selected_edit_date}"
+        edit_ex_name = st.text_input(
+            "運動內容",
+
+            value=(
+                selected_history.get(
+                    "ex_name",
+                    ""
                 )
+                or ""
+            ),
+
+            key=(
+                f"edit_ex_"
+                f"{person}_"
+                f"{selected_edit_date}"
             )
         )
 
-        edit_ex_cal = (
-            st.number_input(
-                "運動消耗 kcal",
-                min_value=0,
-                value=safe_int(
-                    selected_history.get(
-                        "ex_cal",
-                        0
-                    )
-                ),
-                step=10,
-                key=(
-                    f"edit_ex_cal_"
-                    f"{person}_"
-                    f"{selected_edit_date}"
+
+        edit_ex_cal = st.number_input(
+            "運動消耗 kcal",
+
+            min_value=0,
+
+            value=safe_int(
+                selected_history.get(
+                    "ex_cal",
+                    0
                 )
+            ),
+
+            step=10,
+
+            key=(
+                f"edit_ex_cal_"
+                f"{person}_"
+                f"{selected_edit_date}"
             )
         )
+
 
         raw_items = (
             selected_history.get(
@@ -2892,6 +3300,7 @@ with tab3:
                 []
             )
         )
+
 
         if isinstance(
             raw_items,
@@ -2908,9 +3317,11 @@ with tab3:
 
                 raw_items = []
 
+
         edit_food_df = pd.DataFrame(
             raw_items
         )
+
 
         for col in [
             "name",
@@ -2932,6 +3343,7 @@ with tab3:
                     else 0
                 )
 
+
         edit_food_df = (
             edit_food_df[
                 [
@@ -2945,12 +3357,17 @@ with tab3:
             ]
         )
 
+
         edited_history_foods = (
             st.data_editor(
                 edit_food_df,
+
                 hide_index=True,
+
                 num_rows="dynamic",
+
                 use_container_width=True,
+
                 key=(
                     f"history_food_editor_"
                     f"{person}_"
@@ -2959,15 +3376,19 @@ with tab3:
             )
         )
 
+
         col1, col2 = st.columns(
             2
         )
+
 
         with col1:
 
             if st.button(
                 "💾 儲存修改",
+
                 type="primary",
+
                 key=(
                     f"update_history_"
                     f"{person}_"
@@ -2976,6 +3397,7 @@ with tab3:
             ):
 
                 foods = []
+
 
                 for item in (
                     edited_history_foods
@@ -2993,6 +3415,7 @@ with tab3:
                                     ""
                                 )
                             ),
+
                             "portion":
                             str(
                                 item.get(
@@ -3000,6 +3423,7 @@ with tab3:
                                     ""
                                 )
                             ),
+
                             "calories":
                             safe_int(
                                 item.get(
@@ -3007,6 +3431,7 @@ with tab3:
                                     0
                                 )
                             ),
+
                             "protein":
                             safe_float(
                                 item.get(
@@ -3014,6 +3439,7 @@ with tab3:
                                     0
                                 )
                             ),
+
                             "fat":
                             safe_float(
                                 item.get(
@@ -3021,6 +3447,7 @@ with tab3:
                                     0
                                 )
                             ),
+
                             "carbs":
                             safe_float(
                                 item.get(
@@ -3030,6 +3457,7 @@ with tab3:
                             )
                         }
                     )
+
 
                 success = save_daily_record(
                     person,
@@ -3041,6 +3469,7 @@ with tab3:
                     foods
                 )
 
+
                 if success:
 
                     st.success(
@@ -3049,10 +3478,12 @@ with tab3:
 
                     st.rerun()
 
+
         with col2:
 
             if st.button(
                 "🗑️ 刪除這筆",
+
                 key=(
                     f"delete_history_"
                     f"{person}_"
@@ -3060,11 +3491,14 @@ with tab3:
                 )
             ):
 
-                success = delete_daily_record(
-                    selected_history[
-                        "id"
-                    ]
+                success = (
+                    delete_daily_record(
+                        selected_history[
+                            "id"
+                        ]
+                    )
                 )
+
 
                 if success:
 
@@ -3073,6 +3507,7 @@ with tab3:
                     )
 
                     st.rerun()
+
 
     else:
 
@@ -3091,20 +3526,26 @@ with tab4:
         f"🎯 飲食目標｜{person}"
     )
 
+
     st.caption(
         "教練調整飲食目標時新增一筆即可。"
         "系統會依生效日期套用到之後的每日紀錄。"
     )
 
+
     target_date = st.date_input(
         "生效日期",
+
         value=date.today(),
+
         format="YYYY/MM/DD",
+
         key=(
             f"target_date_"
             f"{person}"
         )
     )
+
 
     existing_target = (
         get_exact_target(
@@ -3113,35 +3554,52 @@ with tab4:
         )
     )
 
+
+    # =====================================================
+    # 預設值
+    # =====================================================
+
     if existing_target:
 
-        default_target_cal = safe_float(
-            existing_target.get(
-                "calories",
-                0
+        default_target_cal = (
+            safe_float(
+                existing_target.get(
+                    "calories",
+                    0
+                )
             )
         )
 
-        default_target_carbs = safe_float(
-            existing_target.get(
-                "carbs",
-                0
+
+        default_target_carbs = (
+            safe_float(
+                existing_target.get(
+                    "carbs",
+                    0
+                )
             )
         )
 
-        default_target_protein = safe_float(
-            existing_target.get(
-                "protein",
-                0
+
+        default_target_protein = (
+            safe_float(
+                existing_target.get(
+                    "protein",
+                    0
+                )
             )
         )
 
-        default_target_fat = safe_float(
-            existing_target.get(
-                "fat",
-                0
+
+        default_target_fat = (
+            safe_float(
+                existing_target.get(
+                    "fat",
+                    0
+                )
             )
         )
+
 
     else:
 
@@ -3159,13 +3617,18 @@ with tab4:
             default_target_protein = 120
             default_target_fat = 50
 
+
     target_calories = st.number_input(
         "每日熱量 kcal",
+
         min_value=0,
+
         value=int(
             default_target_cal
         ),
+
         step=50,
+
         key=(
             f"target_cal_"
             f"{person}_"
@@ -3173,13 +3636,18 @@ with tab4:
         )
     )
 
+
     target_carbs = st.number_input(
         "碳水 g",
+
         min_value=0.0,
+
         value=float(
             default_target_carbs
         ),
+
         step=5.0,
+
         key=(
             f"target_carbs_"
             f"{person}_"
@@ -3187,13 +3655,18 @@ with tab4:
         )
     )
 
+
     target_protein = st.number_input(
         "蛋白質 g",
+
         min_value=0.0,
+
         value=float(
             default_target_protein
         ),
+
         step=5.0,
+
         key=(
             f"target_protein_"
             f"{person}_"
@@ -3201,13 +3674,18 @@ with tab4:
         )
     )
 
+
     target_fat = st.number_input(
         "脂肪 g",
+
         min_value=0.0,
+
         value=float(
             default_target_fat
         ),
+
         step=5.0,
+
         key=(
             f"target_fat_"
             f"{person}_"
@@ -3215,13 +3693,16 @@ with tab4:
         )
     )
 
+
     if st.button(
         (
             "💾 更新飲食目標"
             if existing_target
             else "💾 新增飲食目標"
         ),
+
         type="primary",
+
         key=(
             f"save_target_"
             f"{person}_"
@@ -3229,14 +3710,17 @@ with tab4:
         )
     ):
 
-        success = save_nutrition_target(
-            person,
-            target_date,
-            target_calories,
-            target_carbs,
-            target_protein,
-            target_fat
+        success = (
+            save_nutrition_target(
+                person,
+                target_date,
+                target_calories,
+                target_carbs,
+                target_protein,
+                target_fat
+            )
         )
+
 
         if success:
 
@@ -3257,13 +3741,16 @@ with tab4:
         )
     )
 
+
     if not targets_df.empty:
 
         st.markdown("---")
 
+
         st.write(
             "### 飲食目標歷史"
         )
+
 
         targets_show = (
             targets_df
@@ -3273,6 +3760,7 @@ with tab4:
             )
             .copy()
         )
+
 
         targets_show[
             "生效日期"
@@ -3284,6 +3772,7 @@ with tab4:
                 simple_date
             )
         )
+
 
         targets_show[
             "熱量"
@@ -3299,32 +3788,42 @@ with tab4:
             .astype(int)
         )
 
+
         targets_show[
             "碳水"
-        ] = pd.to_numeric(
-            targets_show[
-                "carbs"
-            ],
-            errors="coerce"
+        ] = (
+            pd.to_numeric(
+                targets_show[
+                    "carbs"
+                ],
+                errors="coerce"
+            )
         )
+
 
         targets_show[
             "蛋白質"
-        ] = pd.to_numeric(
-            targets_show[
-                "protein"
-            ],
-            errors="coerce"
+        ] = (
+            pd.to_numeric(
+                targets_show[
+                    "protein"
+                ],
+                errors="coerce"
+            )
         )
+
 
         targets_show[
             "脂肪"
-        ] = pd.to_numeric(
-            targets_show[
-                "fat"
-            ],
-            errors="coerce"
+        ] = (
+            pd.to_numeric(
+                targets_show[
+                    "fat"
+                ],
+                errors="coerce"
+            )
         )
+
 
         st.dataframe(
             targets_show[
@@ -3336,26 +3835,33 @@ with tab4:
                     "脂肪"
                 ]
             ],
+
             hide_index=True,
+
             use_container_width=True
         )
+
 
         delete_target_date = (
             st.selectbox(
                 "刪除某一筆目標",
+
                 options=(
                     targets_df[
                         "effective_date"
                     ]
                     .tolist()
                 ),
+
                 format_func=simple_date,
+
                 key=(
                     f"delete_target_date_"
                     f"{person}"
                 )
             )
         )
+
 
         selected_target_delete = (
             targets_df[
@@ -3367,8 +3873,10 @@ with tab4:
             .iloc[0]
         )
 
+
         if st.button(
             "🗑️ 刪除這筆目標",
+
             key=(
                 f"delete_target_"
                 f"{person}_"
@@ -3376,11 +3884,14 @@ with tab4:
             )
         ):
 
-            success = delete_nutrition_target(
-                selected_target_delete[
-                    "id"
-                ]
+            success = (
+                delete_nutrition_target(
+                    selected_target_delete[
+                        "id"
+                    ]
+                )
             )
+
 
             if success:
 
@@ -3389,6 +3900,7 @@ with tab4:
                 )
 
                 st.rerun()
+
 
     else:
 
@@ -3407,25 +3919,33 @@ with tab5:
         f"InBody｜{person}"
     )
 
+
     ib_date = st.date_input(
         "測量日期",
+
         value=date.today(),
+
         format="YYYY/MM/DD",
+
         key=(
             f"ib_date_"
             f"{person}"
         )
     )
 
+
     old_ib = get_inbody_record(
         person,
         ib_date
     )
 
+
     ib_weight = st.number_input(
         "InBody 體重 (kg)",
+
         min_value=30.0,
         max_value=200.0,
+
         value=(
             safe_float(
                 old_ib.get(
@@ -3436,7 +3956,9 @@ with tab5:
             if old_ib
             else 60.0
         ),
+
         step=0.1,
+
         key=(
             f"ib_weight_"
             f"{person}_"
@@ -3444,10 +3966,13 @@ with tab5:
         )
     )
 
+
     ib_body_fat = st.number_input(
         "體脂率 (%)",
+
         min_value=1.0,
         max_value=70.0,
+
         value=(
             safe_float(
                 old_ib.get(
@@ -3458,7 +3983,9 @@ with tab5:
             if old_ib
             else 20.0
         ),
+
         step=0.1,
+
         key=(
             f"ib_bodyfat_"
             f"{person}_"
@@ -3466,10 +3993,13 @@ with tab5:
         )
     )
 
+
     ib_muscle = st.number_input(
         "骨骼肌 (kg)",
+
         min_value=1.0,
         max_value=100.0,
+
         value=(
             safe_float(
                 old_ib.get(
@@ -3480,7 +4010,9 @@ with tab5:
             if old_ib
             else 25.0
         ),
+
         step=0.1,
+
         key=(
             f"ib_muscle_"
             f"{person}_"
@@ -3488,10 +4020,13 @@ with tab5:
         )
     )
 
+
     ib_bmr = st.number_input(
         "BMR (kcal)",
+
         min_value=500,
         max_value=5000,
+
         value=(
             safe_int(
                 old_ib.get(
@@ -3502,7 +4037,9 @@ with tab5:
             if old_ib
             else 1400
         ),
+
         step=10,
+
         key=(
             f"ib_bmr_"
             f"{person}_"
@@ -3510,13 +4047,16 @@ with tab5:
         )
     )
 
+
     if st.button(
         (
             "💾 更新 InBody"
             if old_ib
             else "💾 儲存 InBody"
         ),
+
         type="primary",
+
         key=(
             f"save_ib_"
             f"{person}_"
@@ -3524,14 +4064,17 @@ with tab5:
         )
     ):
 
-        success = save_inbody_record(
-            person,
-            ib_date,
-            ib_weight,
-            ib_body_fat,
-            ib_muscle,
-            ib_bmr
+        success = (
+            save_inbody_record(
+                person,
+                ib_date,
+                ib_weight,
+                ib_body_fat,
+                ib_muscle,
+                ib_bmr
+            )
         )
+
 
         if success:
 
@@ -3542,9 +4085,14 @@ with tab5:
             st.rerun()
 
 
+    # =====================================================
+    # InBody 歷史
+    # =====================================================
+
     ib_df = get_inbody_logs(
         person
     )
+
 
     if not ib_df.empty:
 
@@ -3556,30 +4104,38 @@ with tab5:
             ]
         )
 
+
         ib_df = ib_df.sort_values(
             "date"
         )
 
+
         st.markdown("---")
+
 
         st.write(
             "### InBody 體重趨勢"
         )
 
+
         fig_ib = go.Figure()
+
 
         fig_ib.add_trace(
             go.Scatter(
                 x=ib_df[
                     "date"
                 ],
+
                 y=pd.to_numeric(
                     ib_df[
                         "weight"
                     ],
                     errors="coerce"
                 ),
+
                 mode="lines+markers",
+
                 hovertemplate=(
                     "%{x|%m/%d}"
                     "<br>"
@@ -3589,40 +4145,50 @@ with tab5:
             )
         )
 
+
         fig_ib.update_xaxes(
             tickformat="%m/%d",
             nticks=6
         )
 
+
         fig_ib.update_yaxes(
             tickformat=".1f"
         )
 
+
         fig_ib.update_layout(
             height=300,
+
             margin=dict(
                 l=10,
                 r=10,
                 t=10,
                 b=20
             ),
+
             showlegend=False
         )
+
 
         st.plotly_chart(
             fig_ib,
             use_container_width=True,
+
             config={
                 "displayModeBar":
                 False
             },
+
             key=(
                 f"inbody_chart_"
                 f"{person}"
             )
         )
 
+
         show_ib = ib_df.copy()
+
 
         show_ib[
             "日期"
@@ -3634,6 +4200,7 @@ with tab5:
                 simple_date
             )
         )
+
 
         show_ib[
             "體重"
@@ -3647,6 +4214,7 @@ with tab5:
             .round(1)
         )
 
+
         show_ib[
             "體脂率"
         ] = (
@@ -3659,6 +4227,7 @@ with tab5:
             .round(1)
         )
 
+
         show_ib[
             "骨骼肌"
         ] = (
@@ -3670,6 +4239,7 @@ with tab5:
             )
             .round(1)
         )
+
 
         show_ib[
             "BMR"
@@ -3684,6 +4254,7 @@ with tab5:
             .astype(int)
         )
 
+
         st.dataframe(
             show_ib[
                 [
@@ -3694,10 +4265,16 @@ with tab5:
                     "BMR"
                 ]
             ],
+
             hide_index=True,
+
             use_container_width=True
         )
 
+
+        # =================================================
+        # InBody CSV
+        # =================================================
 
         ib_csv = (
             show_ib[
@@ -3717,13 +4294,18 @@ with tab5:
             )
         )
 
+
         st.download_button(
             "⬇️ 下載 InBody CSV",
+
             data=ib_csv,
+
             file_name=(
                 f"{person}_InBody.csv"
             ),
+
             mime="text/csv",
+
             key=(
                 f"inbody_csv_"
                 f"{person}"
@@ -3731,24 +4313,33 @@ with tab5:
         )
 
 
+        # =================================================
+        # 刪除 InBody
+        # =================================================
+
         st.markdown("---")
+
 
         delete_ib_date = (
             st.selectbox(
                 "刪除某筆 InBody",
+
                 options=(
                     ib_df[
                         "date"
                     ]
                     .tolist()
                 ),
+
                 format_func=simple_date,
+
                 key=(
                     f"delete_ib_date_"
                     f"{person}"
                 )
             )
         )
+
 
         selected_ib_delete = (
             ib_df[
@@ -3760,8 +4351,10 @@ with tab5:
             .iloc[0]
         )
 
+
         if st.button(
             "🗑️ 刪除這筆 InBody",
+
             key=(
                 f"delete_ib_"
                 f"{person}_"
@@ -3769,11 +4362,14 @@ with tab5:
             )
         ):
 
-            success = delete_inbody_record(
-                selected_ib_delete[
-                    "id"
-                ]
+            success = (
+                delete_inbody_record(
+                    selected_ib_delete[
+                        "id"
+                    ]
+                )
             )
+
 
             if success:
 
@@ -3782,6 +4378,7 @@ with tab5:
                 )
 
                 st.rerun()
+
 
     else:
 
