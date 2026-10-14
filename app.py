@@ -103,6 +103,26 @@ div[data-testid="stPlotlyChart"] { margin: .2rem 0 !important; }
     div[data-testid="stVerticalBlock"] { gap: .75rem !important; }
     div[data-testid="stHorizontalBlock"] { gap: .5rem !important; }
 }
+
+/* 今日營養：數值縮小至內文字級 */
+div[data-testid="stMetricValue"] {
+    font-size: 18px !important;
+    line-height: 1.4 !important;
+    font-weight: 500 !important;
+}
+
+/* 指標名稱 */
+div[data-testid="stMetricLabel"] p {
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+}
+
+/* 減少數值與標籤間距 */
+div[data-testid="stMetric"] {
+    padding: 2px 0 !important;
+    gap: 2px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
